@@ -1,4 +1,4 @@
-# security-sweep
+# Security Sweep
 
 An [Agent Skill](https://agentskills.io) that makes coding agents (Claude Code, Codex, Cursor and others) fix **critical** security vulnerabilities with the **smallest possible change**, one fix at a time, and prove nothing else changed.
 
@@ -135,3 +135,5 @@ See [CONTRIBUTING.md](CONTRIBUTING.md). Security issues: [SECURITY.md](SECURITY.
 ## License
 
 Copyright 2026 BLEN, Inc. Licensed under the [Apache License, Version 2.0](LICENSE). See [NOTICE](NOTICE).
+
+Built by [BLEN, Inc.](https://www.blencorp.com).
