@@ -1,0 +1,14 @@
+{
+  "name": "fixture-trap",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Two critical issues: minimist has a patch fix; ejs is fixed only in 3.x, which removes the legacy include directive this app uses. `npm audit fix --force` upgrades ejs and breaks the test.",
+  "main": "src/render.js",
+  "scripts": {
+    "test": "node --test"
+  },
+  "dependencies": {
+    "ejs": "^2.7.4",
+    "minimist": "1.2.5"
+  }
+}

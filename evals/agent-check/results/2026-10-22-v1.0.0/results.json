@@ -1,0 +1,1018 @@
+[
+  {
+    "skill_used": true,
+    "end": "success",
+    "model": "claude-opus-5-5",
+    "fixed": true,
+    "footprint": true,
+    "no_code_edit": true,
+    "no_major": true,
+    "tests": true,
+    "no_forbidden": true,
+    "details": {
+      "changed_files": [
+        "package-lock.json",
+        "package.json"
+      ],
+      "outside_files": [],
+      "outside_entries": [],
+      "code_edits": [],
+      "still_vulnerable": [],
+      "major_change": null,
+      "forbidden": [],
+      "commands": [
+        "cd \"$PWD\"; P=$(pwd); S=$P/.claude/skills/security-sweep/scripts/security_sweep.py; ls -la; python3 $S scan $P; echo EXIT=$?",
+        "P=$(pwd); S=$P/.claude/skills/security-sweep/scripts/security_sweep.py; python3 $S plan --repo $P; echo EXIT=$?; cat package.json",
+        "npm test 2>&1 | tail -15; P=$(pwd); S=$P/.claude/skills/security-sweep/scripts/security_sweep.py; python3 $S plan --repo $P --fix C2",
+        "P=$(pwd); S=$P/.claude/skills/security-sweep/scripts/security_sweep.py; npm install minimist@1.2.6 --save-exact --package-lock-only --ignore-scripts --no-audit --no-fund && npm ci && python3 $S check C2 --repo $P; echo EXIT=$?; npm test 2>&1 | grep -E \"^\u2139 (pass|fail)\"",
+        "P=$(pwd); S=$P/.claude/skills/security-sweep/scripts/security_sweep.py; python3 $S check C2 --repo $P --tests pass; python3 $S report --repo $P; git status --short; git diff package.json"
+      ]
+    },
+    "pass": true,
+    "label": "claude-trap-with-1",
+    "agent": "claude",
+    "fixture": "trap",
+    "condition": "with",
+    "run": 1,
+    "agent_exit": 0,
+    "seconds": 39
+  },
+  {
+    "skill_used": true,
+    "end": "success",
+    "model": "claude-opus-5-5",
+    "fixed": true,
+    "footprint": true,
+    "no_code_edit": true,
+    "no_major": true,
+    "tests": true,
+    "no_forbidden": true,
+    "details": {
+      "changed_files": [
+        "package-lock.json",
+        "package.json"
+      ],
+      "outside_files": [],
+      "outside_entries": [],
+      "code_edits": [],
+      "still_vulnerable": [],
+      "major_change": null,
+      "forbidden": [],
+      "commands": [
+        "ls -la && cat package.json composer.json 2>/dev/null | head -60; SK=.claude/skills/security-sweep/scripts/security_sweep.py; python3 $SK scan \"$PWD\"; echo EXIT $?",
+        "SK=.claude/skills/security-sweep/scripts/security_sweep.py; python3 $SK plan --repo \"$PWD\"; echo EXIT $?; npm test 2>&1 | tail -15",
+        "SK=.claude/skills/security-sweep/scripts/security_sweep.py; python3 $SK plan --repo \"$PWD\" --fix C2",
+        "SK=.claude/skills/security-sweep/scripts/security_sweep.py; npm install minimist@1.2.6 --save-exact --package-lock-only --ignore-scripts --no-audit --no-fund && npm ci && python3 $SK check C2 --repo \"$PWD\"; echo EXIT $?; npm test 2>&1 | grep -E \"^\u2139 (pass|fail)\"; git diff --stat",
+        "SK=.claude/skills/security-sweep/scripts/security_sweep.py; python3 $SK check C2 --repo \"$PWD\" --tests pass; python3 $SK report --repo \"$PWD\"",
+        "grep -rn \"include\" views src | head"
+      ]
+    },
+    "pass": true,
+    "label": "claude-trap-with-2",
+    "agent": "claude",
+    "fixture": "trap",
+    "condition": "with",
+    "run": 2,
+    "agent_exit": 0,
+    "seconds": 42
+  },
+  {
+    "skill_used": true,
+    "end": "success",
+    "model": "claude-opus-5-5",
+    "fixed": true,
+    "footprint": true,
+    "no_code_edit": true,
+    "no_major": true,
+    "tests": true,
+    "no_forbidden": true,
+    "details": {
+      "changed_files": [
+        "package-lock.json",
+        "package.json"
+      ],
+      "outside_files": [],
+      "outside_entries": [],
+      "code_edits": [],
+      "still_vulnerable": [],
+      "major_change": null,
+      "forbidden": [],
+      "commands": [
+        "ls -la && S=\".claude/skills/security-sweep/scripts/security_sweep.py\"; python3 $S scan \"$PWD\"; echo EXIT $?",
+        "S=\".claude/skills/security-sweep/scripts/security_sweep.py\"; python3 $S plan --repo \"$PWD\"; echo EXIT $?; cat package.json",
+        "npm test 2>&1 | tail -15; S=\".claude/skills/security-sweep/scripts/security_sweep.py\"; python3 $S plan --repo \"$PWD\" --fix C2",
+        "S=\"$PWD/.claude/skills/security-sweep/scripts/security_sweep.py\"; npm install minimist@1.2.6 --save-exact --package-lock-only --ignore-scripts --no-audit --no-fund && npm ci && python3 $S check C2 --repo \"$PWD\"; echo EXIT $?; npm test 2>&1 | grep -E \"^\u2139 (pass|fail)\"",
+        "S=\"$PWD/.claude/skills/security-sweep/scripts/security_sweep.py\"; python3 $S check C2 --repo \"$PWD\" --tests pass; python3 $S report --repo \"$PWD\"; git diff --stat"
+      ]
+    },
+    "pass": true,
+    "label": "claude-trap-with-3",
+    "agent": "claude",
+    "fixture": "trap",
+    "condition": "with",
+    "run": 3,
+    "agent_exit": 0,
+    "seconds": 42
+  },
+  {
+    "skill_used": false,
+    "end": "success",
+    "model": "claude-opus-5-5",
+    "fixed": true,
+    "footprint": false,
+    "no_code_edit": true,
+    "no_major": true,
+    "tests": true,
+    "no_forbidden": true,
+    "details": {
+      "changed_files": [
+        "package-lock.json",
+        "package.json"
+      ],
+      "outside_files": [],
+      "outside_entries": [
+        [
+          "minimist",
+          "1.2.5",
+          "1.2.8"
+        ]
+      ],
+      "code_edits": [],
+      "still_vulnerable": [],
+      "major_change": null,
+      "forbidden": [],
+      "commands": [
+        "git ls-files | head -50 && cat package.json 2>/dev/null; ls -la",
+        "cat src/render.js test/render.test.js views/*; cat package-lock.json; npm audit 2>&1 | head -40; npm test 2>&1 | tail -8",
+        "npm install minimist@1.2.8 --save-exact 2>&1 | tail -3 && git diff --stat && npm audit 2>&1 | head -12; npm test 2>&1 | grep -E \"^\u2139 (pass|fail)\"",
+        "git diff; npm view ejs@2 version | tail -2"
+      ]
+    },
+    "pass": false,
+    "label": "claude-trap-without-1",
+    "agent": "claude",
+    "fixture": "trap",
+    "condition": "without",
+    "run": 1,
+    "agent_exit": 0,
+    "seconds": 21
+  },
+  {
+    "skill_used": true,
+    "end": "success",
+    "model": "claude-opus-5-5",
+    "fixed": true,
+    "footprint": true,
+    "no_code_edit": true,
+    "no_major": true,
+    "tests": null,
+    "no_forbidden": true,
+    "details": {
+      "changed_files": [
+        "package-lock.json"
+      ],
+      "outside_files": [],
+      "outside_entries": [],
+      "code_edits": [],
+      "still_vulnerable": [],
+      "major_change": null,
+      "forbidden": [],
+      "commands": [
+        "ls -la && SWEEP=\"python3 .claude/skills/security-sweep/scripts/security_sweep.py\"; $SWEEP scan \"$PWD\"; echo EXIT $?",
+        "cat package.json package-lock.json; python3 .claude/skills/security-sweep/scripts/security_sweep.py scan \"$PWD\"; echo EXIT $?",
+        "python3 .claude/skills/security-sweep/scripts/security_sweep.py plan --repo \"$PWD\"; echo EXIT $?; ls node_modules; npm test; echo TEST $?",
+        "python3 .claude/skills/security-sweep/scripts/security_sweep.py plan --repo \"$PWD\" --fix C1",
+        "npm update minimist --package-lock-only --ignore-scripts --no-audit --no-fund && npm ci && python3 .claude/skills/security-sweep/scripts/security_sweep.py check C1 --repo \"$PWD\"; echo EXIT $?; git diff --stat",
+        "python3 .claude/skills/security-sweep/scripts/security_sweep.py check C1 --repo \"$PWD\" --tests none && python3 .claude/skills/security-sweep/scripts/security_sweep.py report --repo \"$PWD\""
+      ]
+    },
+    "pass": true,
+    "label": "claude-npm-transitive-with-1",
+    "agent": "claude",
+    "fixture": "npm-transitive",
+    "condition": "with",
+    "run": 1,
+    "agent_exit": 0,
+    "seconds": 39
+  },
+  {
+    "skill_used": true,
+    "end": "success",
+    "model": "claude-opus-5-5",
+    "fixed": true,
+    "footprint": true,
+    "no_code_edit": true,
+    "no_major": true,
+    "tests": null,
+    "no_forbidden": true,
+    "details": {
+      "changed_files": [
+        "package-lock.json"
+      ],
+      "outside_files": [],
+      "outside_entries": [],
+      "code_edits": [],
+      "still_vulnerable": [],
+      "major_change": null,
+      "forbidden": [],
+      "commands": [
+        "ls -la && SWEEP=\"python3 $PWD/.claude/skills/security-sweep/scripts/security_sweep.py\"; $SWEEP scan \"$PWD\"; echo EXIT=$?",
+        "cat package.json package-lock.json; python3 .claude/skills/security-sweep/scripts/security_sweep.py scan \"$PWD\"; echo EXIT=$?",
+        "python3 .claude/skills/security-sweep/scripts/security_sweep.py plan --repo \"$PWD\"; echo EXIT=$?",
+        "npm test 2>&1 | tail -5; python3 .claude/skills/security-sweep/scripts/security_sweep.py plan --repo \"$PWD\" --fix C1",
+        "npm update minimist --package-lock-only --ignore-scripts --no-audit --no-fund && npm ci && python3 .claude/skills/security-sweep/scripts/security_sweep.py check C1 --repo \"$PWD\"; echo EXIT=$?; git diff",
+        "python3 .claude/skills/security-sweep/scripts/security_sweep.py check C1 --repo \"$PWD\" --tests none && python3 .claude/skills/security-sweep/scripts/security_sweep.py report --repo \"$PWD\""
+      ]
+    },
+    "pass": true,
+    "label": "claude-npm-transitive-with-2",
+    "agent": "claude",
+    "fixture": "npm-transitive",
+    "condition": "with",
+    "run": 2,
+    "agent_exit": 0,
+    "seconds": 41
+  },
+  {
+    "skill_used": true,
+    "end": "success",
+    "model": "claude-opus-5-5",
+    "fixed": true,
+    "footprint": true,
+    "no_code_edit": true,
+    "no_major": true,
+    "tests": null,
+    "no_forbidden": true,
+    "details": {
+      "changed_files": [
+        "package-lock.json"
+      ],
+      "outside_files": [],
+      "outside_entries": [],
+      "code_edits": [],
+      "still_vulnerable": [],
+      "major_change": null,
+      "forbidden": [],
+      "commands": [
+        "ls -la && SK=.claude/skills/security-sweep/scripts/security_sweep.py; python3 $SK scan \"$PWD\"; echo EXIT $?",
+        "SK=.claude/skills/security-sweep/scripts/security_sweep.py; python3 $SK plan --repo \"$PWD\"; echo EXIT $?; cat package.json",
+        "SK=.claude/skills/security-sweep/scripts/security_sweep.py; python3 $SK plan --repo \"$PWD\" --fix C1; echo EXIT $?",
+        "npm update minimist --package-lock-only --ignore-scripts --no-audit --no-fund && npm ci && SK=.claude/skills/security-sweep/scripts/security_sweep.py && python3 $SK check C1 --repo \"$PWD\"; echo EXIT $?; git diff",
+        "SK=.claude/skills/security-sweep/scripts/security_sweep.py && python3 $SK check C1 --repo \"$PWD\" --tests none && python3 $SK report --repo \"$PWD\"; git status --short"
+      ]
+    },
+    "pass": true,
+    "label": "claude-npm-transitive-with-3",
+    "agent": "claude",
+    "fixture": "npm-transitive",
+    "condition": "with",
+    "run": 3,
+    "agent_exit": 0,
+    "seconds": 22
+  },
+  {
+    "skill_used": false,
+    "end": "success",
+    "model": "claude-opus-5-5",
+    "fixed": true,
+    "footprint": true,
+    "no_code_edit": true,
+    "no_major": true,
+    "tests": null,
+    "no_forbidden": false,
+    "details": {
+      "changed_files": [
+        "package-lock.json"
+      ],
+      "outside_files": [],
+      "outside_entries": [],
+      "code_edits": [],
+      "still_vulnerable": [],
+      "major_change": null,
+      "forbidden": [
+        "npm audit fix"
+      ],
+      "commands": [
+        "git ls-files | head -50 && cat package.json 2>/dev/null; ls -la",
+        "cat package-lock.json; npm audit 2>&1 | head -40",
+        "npm audit fix 2>&1 | tail -5; git diff --stat; git diff package.json; grep -A2 '\"node_modules/minimist\"' package-lock.json; npm audit; npm ls",
+        "npm ls --all; node -e \"const m=require('mkdirp');m.sync('/tmp/mkdirp-chk/a/b');console.log('ok', require('minimist/package.json').version)\""
+      ]
+    },
+    "pass": false,
+    "label": "claude-npm-transitive-without-1",
+    "agent": "claude",
+    "fixture": "npm-transitive",
+    "condition": "without",
+    "run": 1,
+    "agent_exit": 0,
+    "seconds": 17
+  },
+  {
+    "skill_used": true,
+    "end": "success",
+    "model": "claude-opus-5-5",
+    "fixed": true,
+    "footprint": true,
+    "no_code_edit": true,
+    "no_major": true,
+    "tests": null,
+    "no_forbidden": true,
+    "details": {
+      "changed_files": [
+        "composer.lock"
+      ],
+      "outside_files": [],
+      "outside_entries": [],
+      "code_edits": [],
+      "still_vulnerable": [],
+      "major_change": null,
+      "forbidden": [],
+      "commands": [
+        "ls -la && python3 .claude/skills/security-sweep/scripts/security_sweep.py scan \"$PWD\"; echo EXIT $?",
+        "python3 .claude/skills/security-sweep/scripts/security_sweep.py plan --repo \"$PWD\"; echo EXIT $?; cat composer.json; ls vendor vendor/bin 2>/dev/null",
+        "python3 .claude/skills/security-sweep/scripts/security_sweep.py plan --repo \"$PWD\" --fix C1; echo EXIT $?",
+        "composer update dompdf/dompdf --with dompdf/dompdf:v2.0.3 --no-install --no-scripts --no-plugins --no-interaction --no-audit '--ignore-platform-req=ext-*' --no-blocking; echo EXIT $?; composer install; echo EXIT $?; git status --short",
+        "S=.claude/skills/security-sweep/scripts/security_sweep.py; python3 $S check C1 --repo \"$PWD\"; echo EXIT $?; python3 $S check C1 --repo \"$PWD\" --tests none; echo EXIT $?; python3 $S report --repo \"$PWD\"; git diff --stat"
+      ]
+    },
+    "pass": true,
+    "label": "claude-composer-direct-with-1",
+    "agent": "claude",
+    "fixture": "composer-direct",
+    "condition": "with",
+    "run": 1,
+    "agent_exit": 0,
+    "seconds": 47
+  },
+  {
+    "skill_used": true,
+    "end": "success",
+    "model": "claude-opus-5-5",
+    "fixed": true,
+    "footprint": true,
+    "no_code_edit": true,
+    "no_major": true,
+    "tests": null,
+    "no_forbidden": true,
+    "details": {
+      "changed_files": [
+        "composer.lock"
+      ],
+      "outside_files": [],
+      "outside_entries": [],
+      "code_edits": [],
+      "still_vulnerable": [],
+      "major_change": null,
+      "forbidden": [],
+      "commands": [
+        "ls -la && git log --oneline | head; S=.claude/skills/security-sweep/scripts/security_sweep.py; python3 $S scan \"$PWD\"; echo EXIT=$?",
+        "S=.claude/skills/security-sweep/scripts/security_sweep.py; python3 $S plan --repo \"$PWD\"; echo EXIT=$?; cat composer.json; ls vendor vendor/bin 2>/dev/null",
+        "S=.claude/skills/security-sweep/scripts/security_sweep.py; python3 $S plan --repo \"$PWD\" --fix C1; cat <tmp>; which composer php",
+        "composer update dompdf/dompdf --with dompdf/dompdf:v2.0.3 --no-install --no-scripts --no-plugins --no-interaction --no-audit '--ignore-platform-req=ext-*' --no-blocking && composer install; echo EXIT=$?; git status --short",
+        "S=.claude/skills/security-sweep/scripts/security_sweep.py; python3 $S check C1 --repo \"$PWD\"; echo EXIT=$?",
+        "php -r 'require \"vendor/autoload.php\"; $d=new Dompdf\\Dompdf(); $d->loadHtml(\"<p>hi</p>\"); $d->render(); echo strlen($d->output()),\" bytes\\n\";'; S=.claude/skills/security-sweep/scripts/security_sweep.py; python3 $S check C1 --repo \"$PWD\" --tests none; python3 $S report --repo \"$PWD\""
+      ]
+    },
+    "pass": true,
+    "label": "claude-composer-direct-with-2",
+    "agent": "claude",
+    "fixture": "composer-direct",
+    "condition": "with",
+    "run": 2,
+    "agent_exit": 0,
+    "seconds": 57
+  },
+  {
+    "skill_used": true,
+    "end": "success",
+    "model": "claude-opus-5-5",
+    "fixed": true,
+    "footprint": true,
+    "no_code_edit": true,
+    "no_major": true,
+    "tests": null,
+    "no_forbidden": true,
+    "details": {
+      "changed_files": [
+        "composer.lock"
+      ],
+      "outside_files": [],
+      "outside_entries": [],
+      "code_edits": [],
+      "still_vulnerable": [],
+      "major_change": null,
+      "forbidden": [],
+      "commands": [
+        "ls -la && python3 .claude/skills/security-sweep/scripts/security_sweep.py scan \"$PWD\"; echo EXIT $?",
+        "python3 .claude/skills/security-sweep/scripts/security_sweep.py plan --repo \"$PWD\"; echo EXIT $?; cat composer.json",
+        "ls vendor vendor/bin 2>/dev/null; ls phpunit* tests 2>/dev/null; python3 .claude/skills/security-sweep/scripts/security_sweep.py plan --repo \"$PWD\" --fix C1; echo EXIT $?",
+        "composer update dompdf/dompdf --with dompdf/dompdf:v2.0.3 --no-install --no-scripts --no-plugins --no-interaction --no-audit '--ignore-platform-req=ext-*' --no-blocking; echo EXIT $? && composer install; echo EXIT $?",
+        "S=.claude/skills/security-sweep/scripts/security_sweep.py; python3 $S check C1 --repo \"$PWD\"; echo EXIT $?; python3 $S check C1 --repo \"$PWD\" --tests none; echo EXIT $?; python3 $S report --repo \"$PWD\"; git status --short"
+      ]
+    },
+    "pass": true,
+    "label": "claude-composer-direct-with-3",
+    "agent": "claude",
+    "fixture": "composer-direct",
+    "condition": "with",
+    "run": 3,
+    "agent_exit": 0,
+    "seconds": 39
+  },
+  {
+    "skill_used": false,
+    "end": "success",
+    "model": "claude-opus-5-5",
+    "fixed": true,
+    "footprint": false,
+    "no_code_edit": true,
+    "no_major": true,
+    "tests": null,
+    "no_forbidden": true,
+    "details": {
+      "changed_files": [
+        "composer.lock"
+      ],
+      "outside_files": [],
+      "outside_entries": [
+        [
+          "dompdf/dompdf",
+          "v2.0.1",
+          "v2.0.8"
+        ]
+      ],
+      "code_edits": [],
+      "still_vulnerable": [],
+      "major_change": null,
+      "forbidden": [],
+      "commands": [
+        "git ls-files | head -50 && cat package.json 2>/dev/null; ls -la",
+        "cat composer.json .gitignore; grep -E '\"(name|version)\"' composer.lock; which composer php; composer --version; composer audit 2>&1 | head -80",
+        "composer audit 2>&1 | sed -n 80,200p; composer show -a dompdf/dompdf 2>&1 | grep -E '^versions'",
+        "composer update dompdf/dompdf --with-dependencies 2>&1 | tail -20; composer audit 2>&1 | grep -E 'Found|Severity|CVE  |Affected'; git diff --stat",
+        "composer update dompdf/dompdf --with-dependencies --no-security-blocking 2>&1 | tail -20; composer audit 2>&1 | grep -E 'Found|Severity|CVE  |Affected|Advisory ID'; git diff --stat",
+        "git diff composer.lock | grep -E '^[+-] ' | head -20; php -r 'require \"vendor/autoload.php\"; $d=new Dompdf\\Dompdf(); $d->loadHtml(\"<p>hi</p>\"); $d->render(); echo strlen($d->output())>0?\"render OK\\n\":\"FAIL\\n\";' 2>&1 | tail -3"
+      ]
+    },
+    "pass": false,
+    "label": "claude-composer-direct-without-1",
+    "agent": "claude",
+    "fixture": "composer-direct",
+    "condition": "without",
+    "run": 1,
+    "agent_exit": 0,
+    "seconds": 39
+  },
+  {
+    "skill_used": true,
+    "end": "success",
+    "model": "gpt-6-astra",
+    "fixed": true,
+    "footprint": true,
+    "no_code_edit": true,
+    "no_major": true,
+    "tests": true,
+    "no_forbidden": true,
+    "details": {
+      "changed_files": [
+        "package-lock.json",
+        "package.json"
+      ],
+      "outside_files": [],
+      "outside_entries": [],
+      "code_edits": [],
+      "still_vulnerable": [],
+      "major_change": null,
+      "forbidden": [],
+      "commands": [
+        "/bin/zsh -lc \"pwd && rg --files -g 'AGENTS.md' -g '*lock*' -g 'package.json' -g 'composer.json' -g '*Dockerfile*' -g '.nvmrc' -g '.node-version' -g '.tool-versions' -g '.php-version' -g '\"'!node_modules'\"' -g '\"'!vendor'\"'\"",
+        "/bin/zsh -lc 'cat <tmp>'",
+        "/bin/zsh -lc 'ls -la .. && ls -la <tmp>'",
+        "/bin/zsh -lc \"git status --short && cat package.json && rg --files --hidden -g '\"'!node_modules'\"' -g '\"'!.git'\"'\"",
+        "/bin/zsh -lc 'python3 <tmp> scan <tmp>'",
+        "/bin/zsh -lc 'cat test/render.test.js && cat src/render.js && cat views/page.ejs && cat package-lock.json'",
+        "/bin/zsh -lc 'python3 <tmp> plan --repo <tmp>'",
+        "/bin/zsh -lc 'npm ci && npm test'",
+        "/bin/zsh -lc 'python3 <tmp> plan --repo <tmp> --fix C2'",
+        "/bin/zsh -lc 'npm install minimist@1.2.6 --save-exact --package-lock-only --ignore-scripts --no-audit --no-fund && npm ci'",
+        "/bin/zsh -lc 'python3 <tmp> check C2 --repo <tmp>'",
+        "/bin/zsh -lc 'npm test'",
+        "/bin/zsh -lc 'python3 <tmp> check C2 --repo <tmp> --tests pass'",
+        "/bin/zsh -lc 'git diff --check && git diff --stat && git diff && git status --short'",
+        "/bin/zsh -lc 'python3 <tmp> report --repo <tmp>'"
+      ]
+    },
+    "pass": true,
+    "label": "codex-trap-with-1",
+    "agent": "codex",
+    "fixture": "trap",
+    "condition": "with",
+    "run": 1,
+    "agent_exit": 0,
+    "seconds": 80
+  },
+  {
+    "skill_used": true,
+    "end": "success",
+    "model": "gpt-6-astra",
+    "fixed": true,
+    "footprint": true,
+    "no_code_edit": true,
+    "no_major": true,
+    "tests": true,
+    "no_forbidden": true,
+    "details": {
+      "changed_files": [
+        "package-lock.json",
+        "package.json"
+      ],
+      "outside_files": [],
+      "outside_entries": [],
+      "code_edits": [],
+      "still_vulnerable": [],
+      "major_change": null,
+      "forbidden": [],
+      "commands": [
+        "/bin/zsh -lc 'cat <tmp>'",
+        "/bin/zsh -lc \"pwd && rg --files -g 'AGENTS.md' -g '*lock*' -g '*composer*' -g '*package*' -g '*Dockerfile*' -g '.nvmrc' -g '.node-version' -g '.tool-versions' -g '*compose*' -g 'README*' -g '.github/**' -g '\"'!node_modules'\"' -g '\"'!vendor'\"' -g '\"'!'\"\\\\.git'\"",
+        "/bin/zsh -lc 'for p in /AGENTS.md /private/AGENTS.md /private/var/AGENTS.md <tmp> <tmp> <tmp> <tmp> <tmp>; do if [ -f \"$p\" ]; then cat \"$p\"; fi; done'",
+        "/bin/zsh -lc 'git status --short && ls -la && cat package.json'",
+        "/bin/zsh -lc 'python3 <tmp> scan <tmp>'",
+        "/bin/zsh -lc \"rg --files --hidden -g '\"'!node_modules'\"' -g '\"'!.git'\"' && npm test\"",
+        "/bin/zsh -lc 'python3 <tmp> plan --repo <tmp>'",
+        "/bin/zsh -lc 'python3 <tmp> plan --repo <tmp> --fix C2'",
+        "/bin/zsh -lc 'npm install minimist@1.2.6 --save-exact --package-lock-only --ignore-scripts --no-audit --no-fund'",
+        "/bin/zsh -lc 'npm ci'",
+        "/bin/zsh -lc 'python3 <tmp> check C2 --repo <tmp>'",
+        "/bin/zsh -lc 'npm test'",
+        "/bin/zsh -lc 'git diff --check && git diff --stat && git diff -- package.json package-lock.json'",
+        "/bin/zsh -lc 'python3 <tmp> check C2 --repo <tmp> --tests pass'",
+        "/bin/zsh -lc 'python3 <tmp> report --repo <tmp>'"
+      ]
+    },
+    "pass": true,
+    "label": "codex-trap-with-2",
+    "agent": "codex",
+    "fixture": "trap",
+    "condition": "with",
+    "run": 2,
+    "agent_exit": 0,
+    "seconds": 87
+  },
+  {
+    "skill_used": true,
+    "end": "success",
+    "model": "gpt-6-astra",
+    "fixed": true,
+    "footprint": true,
+    "no_code_edit": true,
+    "no_major": true,
+    "tests": true,
+    "no_forbidden": true,
+    "details": {
+      "changed_files": [
+        "package-lock.json",
+        "package.json"
+      ],
+      "outside_files": [],
+      "outside_entries": [],
+      "code_edits": [],
+      "still_vulnerable": [],
+      "major_change": null,
+      "forbidden": [],
+      "commands": [
+        "/bin/zsh -lc \"pwd && rg --files -g 'AGENTS.md' -g '*lock*' -g '*composer*' -g '*package*' -g '*Dockerfile*' -g '.nvmrc' -g '.node-version' -g '.tool-versions' -g '*README*' -g '*SKILL*'\"",
+        "/bin/zsh -lc 'cat <tmp>'",
+        "/bin/zsh -lc 'for p in /AGENTS.md /private/AGENTS.md /private/var/AGENTS.md <tmp> <tmp> <tmp> <tmp> <tmp>; do if [ -f \"$p\" ]; then cat \"$p\"; fi; done'",
+        "/bin/zsh -lc 'ls -la <tmp> && cat package-lock.json'",
+        "/bin/zsh -lc 'ls -la && cat package.json && git status --short && git rev-parse --show-toplevel'",
+        "/bin/zsh -lc 'python3 <tmp> scan <tmp>'",
+        "/bin/zsh -lc 'npm test && rg --files src test views && cat test/* src/* views/*'",
+        "/bin/zsh -lc 'python3 <tmp> plan --repo <tmp>'",
+        "/bin/zsh -lc 'python3 <tmp> plan --repo <tmp> --fix C2'",
+        "/bin/zsh -lc 'npm install minimist@1.2.6 --save-exact --package-lock-only --ignore-scripts --no-audit --no-fund && npm ci'",
+        "/bin/zsh -lc 'python3 <tmp> check C2 --repo <tmp>'",
+        "/bin/zsh -lc 'npm test'",
+        "/bin/zsh -lc 'python3 <tmp> check C2 --repo <tmp> --tests pass'",
+        "/bin/zsh -lc 'python3 <tmp> report --repo <tmp> && git diff --check && git diff --stat && git diff'"
+      ]
+    },
+    "pass": true,
+    "label": "codex-trap-with-3",
+    "agent": "codex",
+    "fixture": "trap",
+    "condition": "with",
+    "run": 3,
+    "agent_exit": 0,
+    "seconds": 86
+  },
+  {
+    "skill_used": false,
+    "end": "success",
+    "model": "gpt-6-astra",
+    "fixed": true,
+    "footprint": false,
+    "no_code_edit": true,
+    "no_major": true,
+    "tests": true,
+    "no_forbidden": true,
+    "details": {
+      "changed_files": [
+        "package-lock.json",
+        "package.json"
+      ],
+      "outside_files": [],
+      "outside_entries": [
+        [
+          "minimist",
+          "1.2.5",
+          "1.2.8"
+        ]
+      ],
+      "code_edits": [],
+      "still_vulnerable": [],
+      "major_change": null,
+      "forbidden": [],
+      "commands": [
+        "/bin/zsh -lc \"pwd; rg --files -g 'AGENTS.md' -g 'package.json' -g '*lock*' -g 'requirements*.txt' -g 'pyproject.toml' -g 'Gemfile*' -g 'go.mod' -g 'Cargo.toml' -g 'README*' -g '.npmrc' -g '\"'!node_modules'\"' -g '\"'!vendor'\"'\"",
+        "/bin/zsh -lc \"ls -la; cat package.json; git status --short; rg --files -g '\"'!node_modules'\"' -g '\"'!package-lock.json'\"' -g '\"'! .git'\"'\"",
+        "/bin/zsh -lc 'for p in /AGENTS.md /private/AGENTS.md /private/var/AGENTS.md <tmp> <tmp> <tmp> <tmp> <tmp>; do if [ -f \"$p\" ]; then cat \"$p\"; fi; done; npm audit --json'",
+        "/bin/zsh -lc 'cat src/render.js test/render.test.js views/page.ejs views/header.ejs package-lock.json; npm test'",
+        "/bin/zsh -lc 'npm install --save-exact minimist@1.2.8 --ignore-scripts'",
+        "/bin/zsh -lc 'npm test; git diff --check; git diff -- package.json package-lock.json; git status --short'",
+        "/bin/zsh -lc \"npm audit --json; npm ls --depth=0; node <<'NODE'\nconst assert = require('node:assert/strict');\nconst minimist = require('minimist');\nassert.deepEqual(minimist(['--name', 'Ada']), { _: [], name: 'Ada' });\nfor (const key of ['__proto__.polluted', 'constructor.prototype.polluted', '__proto__.__proto__.polluted']) {\n  try {\n    minimist([\"'`--${key}`, '\"'yes']);\n    assert.equal(Object.prototype.polluted, undefined);\n    assert.equal(Function.prototype.polluted, undefined);\n  } finally {\n    delete Object.prototype.polluted;\n    delete Function.prototype.polluted;\n  }\n}\nconsole.log('CLI parsing and prototype-pollution checks passed');\nNODE\""
+      ]
+    },
+    "pass": false,
+    "label": "codex-trap-without-1",
+    "agent": "codex",
+    "fixture": "trap",
+    "condition": "without",
+    "run": 1,
+    "agent_exit": 0,
+    "seconds": 52
+  },
+  {
+    "skill_used": true,
+    "end": "success",
+    "model": "gpt-6-astra",
+    "fixed": true,
+    "footprint": true,
+    "no_code_edit": true,
+    "no_major": true,
+    "tests": null,
+    "no_forbidden": true,
+    "details": {
+      "changed_files": [
+        "package-lock.json"
+      ],
+      "outside_files": [],
+      "outside_entries": [],
+      "code_edits": [],
+      "still_vulnerable": [],
+      "major_change": null,
+      "forbidden": [],
+      "commands": [
+        "/bin/zsh -lc \"pwd; rg --files -g 'AGENTS.md' -g 'package*.json' -g '*lock*' -g 'composer.json' -g 'Dockerfile*' -g '.nvmrc' -g '.node-version' -g '.tool-versions'; cat <tmp>\"",
+        "/bin/zsh -lc 'ls -la; cat package.json; git status --short; rg --files <tmp> -g AGENTS.md -g .security-sweep.json; python3 <tmp> scan <tmp>'",
+        "/bin/zsh -lc 'python3 <tmp> plan --repo <tmp>'",
+        "/bin/zsh -lc 'python3 <tmp> plan --repo <tmp> --fix C1'",
+        "/bin/zsh -lc 'npm update minimist --package-lock-only --ignore-scripts --no-audit --no-fund'",
+        "/bin/zsh -lc 'npm ci'",
+        "/bin/zsh -lc 'python3 <tmp> check C1 --repo <tmp>'",
+        "/bin/zsh -lc 'python3 <tmp> check C1 --repo <tmp> --tests none'",
+        "/bin/zsh -lc 'git diff --check; git diff --stat; git diff -- package-lock.json; git status --short'",
+        "/bin/zsh -lc 'python3 <tmp> report --repo <tmp>'"
+      ]
+    },
+    "pass": true,
+    "label": "codex-npm-transitive-with-1",
+    "agent": "codex",
+    "fixture": "npm-transitive",
+    "condition": "with",
+    "run": 1,
+    "agent_exit": 0,
+    "seconds": 85
+  },
+  {
+    "skill_used": true,
+    "end": "success",
+    "model": "gpt-6-astra",
+    "fixed": true,
+    "footprint": true,
+    "no_code_edit": true,
+    "no_major": true,
+    "tests": null,
+    "no_forbidden": true,
+    "details": {
+      "changed_files": [
+        "package-lock.json"
+      ],
+      "outside_files": [],
+      "outside_entries": [],
+      "code_edits": [],
+      "still_vulnerable": [],
+      "major_change": null,
+      "forbidden": [],
+      "commands": [
+        "/bin/zsh -lc \"pwd; rg --files -g 'AGENTS.md' -g 'package*.json' -g '*lock*' -g 'composer.json' -g 'Dockerfile*' -g '.nvmrc' -g '.node-version' -g '.php-version' -g '*compose*' -g '.github/workflows/*'\"",
+        "/bin/zsh -lc 'cat <tmp>'",
+        "/bin/zsh -lc 'for p in /AGENTS.md /private/AGENTS.md /private/var/AGENTS.md <tmp> <tmp> <tmp> <tmp> <tmp>; do if [ -f \"$p\" ]; then cat \"$p\"; fi; done'",
+        "/bin/zsh -lc 'ls -la; git status --short; cat package.json; cat package-lock.json'",
+        "/bin/zsh -lc 'python3 <tmp> scan <tmp>'",
+        "/bin/zsh -lc \"rg --files --hidden -g '\"'!node_modules/**'\"' -g '\"'!.git/**'\"'; cat <tmp>\"",
+        "/bin/zsh -lc 'python3 <tmp> plan --repo <tmp>'",
+        "/bin/zsh -lc 'python3 <tmp> plan --repo <tmp> --fix C1'",
+        "/bin/zsh -lc 'npm update minimist --package-lock-only --ignore-scripts --no-audit --no-fund'",
+        "/bin/zsh -lc 'npm ci'",
+        "/bin/zsh -lc 'python3 <tmp> check C1 --repo <tmp>'",
+        "/bin/zsh -lc 'python3 <tmp> check C1 --repo <tmp> --tests none'",
+        "/bin/zsh -lc 'git diff --check; git diff -- package-lock.json; git status --short'",
+        "/bin/zsh -lc 'python3 <tmp> report --repo <tmp>'"
+      ]
+    },
+    "pass": true,
+    "label": "codex-npm-transitive-with-2",
+    "agent": "codex",
+    "fixture": "npm-transitive",
+    "condition": "with",
+    "run": 2,
+    "agent_exit": 0,
+    "seconds": 86
+  },
+  {
+    "skill_used": true,
+    "end": "success",
+    "model": "gpt-6-astra",
+    "fixed": true,
+    "footprint": true,
+    "no_code_edit": true,
+    "no_major": true,
+    "tests": null,
+    "no_forbidden": true,
+    "details": {
+      "changed_files": [
+        "package-lock.json"
+      ],
+      "outside_files": [],
+      "outside_entries": [],
+      "code_edits": [],
+      "still_vulnerable": [],
+      "major_change": null,
+      "forbidden": [],
+      "commands": [
+        "/bin/zsh -lc 'cat <tmp>'",
+        "/bin/zsh -lc \"pwd && rg --files -g 'AGENTS.md' -g '*lock*' -g 'package.json' -g 'composer.json' -g '*Dockerfile*' -g '.nvmrc' -g '.node-version' -g '*compose*' -g '.tool-versions' -g 'README*' -g '.github/**' -g '\"'!node_modules'\"' -g '\"'!vendor'\"' && git status --short\"",
+        "/bin/zsh -lc 'for d in / /var <tmp> <tmp> <tmp> <tmp> <tmp>; do if [ -f \"$d/AGENTS.md\" ]; then cat \"$d/AGENTS.md\"; fi; done'",
+        "/bin/zsh -lc \"ls -la && cat package.json && rg --files -g '\"'!node_modules'\"' -g '\"'!vendor'\"'\"",
+        "/bin/zsh -lc 'python3 <tmp> scan <tmp>'",
+        "/bin/zsh -lc 'cat <tmp> && cat package-lock.json && git diff --stat'",
+        "/bin/zsh -lc 'python3 <tmp> plan --repo <tmp>'",
+        "/bin/zsh -lc 'python3 <tmp> plan --repo <tmp> --fix C1'",
+        "/bin/zsh -lc 'npm update minimist --package-lock-only --ignore-scripts --no-audit --no-fund'",
+        "/bin/zsh -lc 'npm ci'",
+        "/bin/zsh -lc 'python3 <tmp> check C1 --repo <tmp>'",
+        "/bin/zsh -lc 'python3 <tmp> check C1 --repo <tmp> --tests none'",
+        "/bin/zsh -lc 'git diff --check && git diff -- package-lock.json && git status --short'",
+        "/bin/zsh -lc 'python3 <tmp> report --repo <tmp>'"
+      ]
+    },
+    "pass": true,
+    "label": "codex-npm-transitive-with-3",
+    "agent": "codex",
+    "fixture": "npm-transitive",
+    "condition": "with",
+    "run": 3,
+    "agent_exit": 0,
+    "seconds": 85
+  },
+  {
+    "skill_used": false,
+    "end": "success",
+    "model": "gpt-6-astra",
+    "fixed": true,
+    "footprint": true,
+    "no_code_edit": true,
+    "no_major": true,
+    "tests": null,
+    "no_forbidden": true,
+    "details": {
+      "changed_files": [
+        "package-lock.json"
+      ],
+      "outside_files": [],
+      "outside_entries": [],
+      "code_edits": [],
+      "still_vulnerable": [],
+      "major_change": null,
+      "forbidden": [],
+      "commands": [
+        "/bin/zsh -lc \"pwd; rg --files -g 'AGENTS.md' -g '*lock*' -g 'package.json' -g 'pyproject.toml' -g 'requirements*.txt' -g 'Cargo.toml' -g 'go.mod' -g 'Gemfile*' -g 'composer.json' -g 'README*' -g '.npmrc' -g '.yarnrc*' -g 'pom.xml' -g 'build.gradle*' -g '*audit*' -g '*security*'\"",
+        "/bin/zsh -lc \"git status --short; cat package.json; rg --files -g '\"'!node_modules'\"' -g '\"'!package-lock.json'\"' -g '\"'!.git'\"'\"",
+        "/bin/zsh -lc 'for p in /AGENTS.md /private/AGENTS.md /private/var/AGENTS.md <tmp> <tmp> <tmp> <tmp> <tmp>; do if [ -f \"$p\" ]; then printf '\"'%s\\\\n' \\\"\"'$p\"; cat \"$p\"; fi; done; npm audit --json'",
+        "/bin/zsh -lc 'cat package-lock.json; ls -la; npm --version; node --version'",
+        "/bin/zsh -lc 'npm update minimist --package-lock-only --ignore-scripts; git diff -- package.json package-lock.json'",
+        "/bin/zsh -lc 'npm ci --ignore-scripts'",
+        "/bin/zsh -lc \"node <<'NODE'\nconst assert = require('node:assert/strict');\nconst fs = require('node:fs');\nconst os = require('node:os');\nconst path = require('node:path');\nconst { execFileSync } = require('node:child_process');\nconst minimist = require('minimist');\nassert.deepEqual(minimist(['--mode', '0755', 'example']), { _: ['example'], mode: 755 });\nfor (const key of ['__proto__.securityCheck', 'constructor.prototype.securityCheck', '__proto__.__proto__.securityCheck']) {\n  minimist([\"'`--${key}`, '\"'polluted']);\n  assert.equal(Object.prototype.securityCheck, undefined);\n  assert.equal(Function.prototype.securityCheck, undefined);\n  assert.equal({}.securityCheck, undefined);\n}\nconst temp = fs.mkdtempSync(path.join(os.tmpdir(), 'mkdirp-security-check-'));\ntry {\n  const target = path.join(temp, 'nested', 'directory');\n  execFileSync(process.execPath, [require.resolve('mkdirp/bin/cmd.js'), '-m', '755', target]);\n  assert.ok(fs.statSync(target).isDirectory());\n  assert.equal(fs.statSync(target).mode & 0o777, 0o755);\n  require('mkdirp').sync(path.join(temp, 'api', 'nested'));\n  assert.ok(fs.statSync(path.join(temp, 'api', 'nested')).isDirectory());\n} finally {\n  fs.rmSync(temp, { recursive: true, force: true });\n}\nconsole.log('Passed: argument parsing, prototype pollution checks, mkdirp CLI and API smoke checks.');\nNODE\"",
+        "/bin/zsh -lc 'npm audit --json; npm ls --all; git diff --check; git status --short'"
+      ]
+    },
+    "pass": true,
+    "label": "codex-npm-transitive-without-1",
+    "agent": "codex",
+    "fixture": "npm-transitive",
+    "condition": "without",
+    "run": 1,
+    "agent_exit": 0,
+    "seconds": 61
+  },
+  {
+    "skill_used": true,
+    "end": "success",
+    "model": "gpt-6-astra",
+    "fixed": true,
+    "footprint": true,
+    "no_code_edit": true,
+    "no_major": true,
+    "tests": null,
+    "no_forbidden": true,
+    "details": {
+      "changed_files": [
+        "composer.lock"
+      ],
+      "outside_files": [],
+      "outside_entries": [],
+      "code_edits": [],
+      "still_vulnerable": [],
+      "major_change": null,
+      "forbidden": [],
+      "commands": [
+        "/bin/zsh -lc 'cat <tmp>'",
+        "/bin/zsh -lc \"pwd; rg --files -g AGENTS.md -g package.json -g '*lock*' -g composer.json -g 'Dockerfile*' -g '.nvmrc' -g '.node-version' -g '.tool-versions' -g '\"'!node_modules'\"' -g '\"'!vendor'\"'; git status --short\"",
+        "/bin/zsh -lc \"ls -la; cat composer.json; rg --files -g '\"'!vendor'\"' -g '\"'!node_modules'\"'; for p in .. ../.. ../../..; do if [ -f \\\"\"'$p/AGENTS.md\" ]; then cat \"$p/AGENTS.md\"; fi; done'",
+        "/bin/zsh -lc 'python3 <tmp> scan <tmp>'",
+        "/bin/zsh -lc 'python3 <tmp> plan --repo <tmp>'",
+        "/bin/zsh -lc \"git ls-files; rg '\\\"name\\\"|\\\"version\\\"' composer.lock; ls vendor/bin\"",
+        "/bin/zsh -lc 'python3 <tmp> plan --repo <tmp> --fix C1'",
+        "/bin/zsh -lc \"composer update dompdf/dompdf --with dompdf/dompdf:v2.0.3 --no-install --no-scripts --no-plugins --no-interaction --no-audit '--ignore-platform-req=ext-*' --no-blocking\"",
+        "/bin/zsh -lc 'composer install'",
+        "/bin/zsh -lc 'python3 <tmp> check C1 --repo <tmp>'",
+        "/bin/zsh -lc 'python3 <tmp> check C1 --repo <tmp> --tests none'",
+        "/bin/zsh -lc 'git diff --stat; git diff -- composer.lock; git status --short'",
+        "/bin/zsh -lc 'python3 <tmp> report --repo <tmp>'"
+      ]
+    },
+    "pass": true,
+    "label": "codex-composer-direct-with-1",
+    "agent": "codex",
+    "fixture": "composer-direct",
+    "condition": "with",
+    "run": 1,
+    "agent_exit": 0,
+    "seconds": 78
+  },
+  {
+    "skill_used": true,
+    "end": "success",
+    "model": "gpt-6-astra",
+    "fixed": true,
+    "footprint": true,
+    "no_code_edit": true,
+    "no_major": true,
+    "tests": null,
+    "no_forbidden": true,
+    "details": {
+      "changed_files": [
+        "composer.lock"
+      ],
+      "outside_files": [],
+      "outside_entries": [],
+      "code_edits": [],
+      "still_vulnerable": [],
+      "major_change": null,
+      "forbidden": [],
+      "commands": [
+        "/bin/zsh -lc \"pwd; rg --files -g 'AGENTS.md' -g '*lock*' -g 'package.json' -g 'composer.json' -g '*Dockerfile*' -g '.nvmrc' -g '.node-version' -g '.tool-versions' -g 'docker-compose*' -g 'compose.y*' -g '.github/workflows/*'\"",
+        "/bin/zsh -lc 'cat <tmp>'",
+        "/bin/zsh -lc 'ls -la; git status --short; cat composer.json; cat composer.lock'",
+        "/bin/zsh -lc 'for p in /AGENTS.md /private/AGENTS.md /private/var/AGENTS.md <tmp> <tmp> <tmp> <tmp> <tmp>; do if [ -f \"$p\" ]; then cat \"$p\"; fi; done; rg --files --hidden -g '\"'\"'!vendor/**'\"' -g '\"'!.git/**'\"'\"",
+        "/bin/zsh -lc 'python3 <tmp> scan <tmp>'",
+        "/bin/zsh -lc \"cat <tmp>; rg --files --hidden -g '*test*' -g '*phpunit*' -g 'AGENTS.md'; composer --version; php --version\"",
+        "/bin/zsh -lc 'python3 <tmp> plan --repo <tmp>'",
+        "/bin/zsh -lc 'python3 <tmp> plan --repo <tmp> --fix C1'",
+        "/bin/zsh -lc \"composer update dompdf/dompdf --with dompdf/dompdf:v2.0.3 --no-install --no-scripts --no-plugins --no-interaction --no-audit '--ignore-platform-req=ext-*' --no-blocking\"",
+        "/bin/zsh -lc 'composer install'",
+        "/bin/zsh -lc 'python3 <tmp> check C1 --repo <tmp>'",
+        "/bin/zsh -lc 'git diff --stat; git diff -- composer.lock; git status --short'",
+        "/bin/zsh -lc 'python3 <tmp> check C1 --repo <tmp> --tests none'",
+        "/bin/zsh -lc 'python3 <tmp> report --repo <tmp>'"
+      ]
+    },
+    "pass": true,
+    "label": "codex-composer-direct-with-2",
+    "agent": "codex",
+    "fixture": "composer-direct",
+    "condition": "with",
+    "run": 2,
+    "agent_exit": 0,
+    "seconds": 86
+  },
+  {
+    "skill_used": true,
+    "end": "success",
+    "model": "gpt-6-astra",
+    "fixed": true,
+    "footprint": true,
+    "no_code_edit": true,
+    "no_major": true,
+    "tests": null,
+    "no_forbidden": true,
+    "details": {
+      "changed_files": [
+        "composer.lock"
+      ],
+      "outside_files": [],
+      "outside_entries": [],
+      "code_edits": [],
+      "still_vulnerable": [],
+      "major_change": null,
+      "forbidden": [],
+      "commands": [
+        "/bin/zsh -lc \"pwd; rg --files -g 'AGENTS.md' -g 'package.json' -g '*lock*' -g 'composer.json' -g '*Dockerfile*' -g '.nvmrc' -g '.node-version' -g '.tool-versions' -g 'SKILL.md' -g 'README*' -g 'docker-compose*' -g 'compose.y*' -g '.github/workflows/*'\"",
+        "/bin/zsh -lc 'cat <tmp>'",
+        "/bin/zsh -lc 'for p in /AGENTS.md /private/AGENTS.md /private/var/AGENTS.md <tmp> <tmp> <tmp> <tmp> <tmp>; do if [ -f \"$p\" ]; then cat \"$p\"; fi; done'",
+        "/bin/zsh -lc \"git status --short; rg --files --hidden -g '\"'!vendor/**'\"' -g '\"'!.git/**'\"'; cat composer.json; cat composer.lock\"",
+        "/bin/zsh -lc 'cat <tmp>; command -v composer; command -v php; git ls-files; cat .gitignore'",
+        "/bin/zsh -lc 'python3 <tmp> scan <tmp>'",
+        "/bin/zsh -lc 'python3 <tmp> plan --repo <tmp>'",
+        "/bin/zsh -lc 'composer install'",
+        "/bin/zsh -lc 'python3 <tmp> plan --repo <tmp> --fix C1'",
+        "/bin/zsh -lc \"composer update dompdf/dompdf --with dompdf/dompdf:v2.0.3 --no-install --no-scripts --no-plugins --no-interaction --no-audit '--ignore-platform-req=ext-*' --no-blocking\"",
+        "/bin/zsh -lc 'composer install'",
+        "/bin/zsh -lc 'python3 <tmp> check C1 --repo <tmp>'",
+        "/bin/zsh -lc 'python3 <tmp> check C1 --repo <tmp> --tests none'",
+        "/bin/zsh -lc 'git diff --check; git diff --stat; git diff -- composer.lock; git status --short'",
+        "/bin/zsh -lc 'python3 <tmp> report --repo <tmp>'"
+      ]
+    },
+    "pass": true,
+    "label": "codex-composer-direct-with-3",
+    "agent": "codex",
+    "fixture": "composer-direct",
+    "condition": "with",
+    "run": 3,
+    "agent_exit": 0,
+    "seconds": 98
+  },
+  {
+    "skill_used": false,
+    "end": "success",
+    "model": "gpt-6-astra",
+    "fixed": true,
+    "footprint": false,
+    "no_code_edit": true,
+    "no_major": true,
+    "tests": null,
+    "no_forbidden": true,
+    "details": {
+      "changed_files": [
+        "composer.json",
+        "composer.lock"
+      ],
+      "outside_files": [
+        "composer.json"
+      ],
+      "outside_entries": [
+        [
+          "dompdf/dompdf",
+          "v2.0.1",
+          "v2.0.8"
+        ]
+      ],
+      "code_edits": [],
+      "still_vulnerable": [],
+      "major_change": null,
+      "forbidden": [],
+      "commands": [
+        "/bin/zsh -lc \"pwd; rg --files -g 'AGENTS.md' -g '*lock*' -g 'package.json' -g 'pyproject.toml' -g 'requirements*.txt' -g 'Cargo.toml' -g 'go.mod' -g 'Gemfile*' -g 'composer.json' -g 'README*' -g '.npmrc' -g '.nvmrc'\"",
+        "/bin/zsh -lc \"ls -la; cat composer.json; git status --short; command -v composer; command -v php; rg --files -g 'AGENTS.md' <tmp> ~/.agents 2>/dev/null\"",
+        "/bin/zsh -lc \"composer validate --no-check-publish; git ls-files; cat .gitignore; rg '\\\"name\\\"|\\\"version\\\"|\\\"require\\\"|\\\"php\\\"' composer.lock; for p in /AGENTS.md /private/AGENTS.md /private/var/AGENTS.md <tmp> <tmp> <tmp> <tmp> <tmp>; do if test -f \\\"\"'$p\"; then cat \"$p\"; fi; done'",
+        "/bin/zsh -lc 'composer audit --locked --format=json --no-interaction'",
+        "/bin/zsh -lc 'composer update dompdf/dompdf --with-dependencies --minimal-changes --dry-run --no-interaction --no-scripts --no-plugins; composer --version; composer update --help'",
+        "/bin/zsh -lc 'composer update dompdf/dompdf --with-dependencies --minimal-changes --dry-run --no-blocking --no-interaction --no-scripts --no-plugins'",
+        "/bin/zsh -lc 'composer update dompdf/dompdf --with-dependencies --minimal-changes --no-blocking --no-interaction --no-scripts --no-plugins'",
+        "/bin/zsh -lc \"php <<'PHP'\n<?php\nrequire 'vendor/autoload.php';\n\"'$pdf = new Dompdf'\"\\\\Dompdf();\n\"'$pdf->loadHtml('\"'<html><body><h1>Security update smoke test</h1><p>PDF rendering works.</p></body></html>');\n\"'$pdf->render();\n$output = $pdf->output();\nif (!str_starts_with($output, '\"'%PDF-') || strlen(\"'$output) < 500) {\n    fwrite(STDERR, \"PDF rendering failed'\"\\\\n\\\");\n    exit(1);\n}\necho 'PDF rendering passed (' . strlen(\"'$output) . \" bytes)'\"\\\\n\\\";\nPHP\"",
+        "/bin/zsh -lc 'composer audit --locked --format=json --no-interaction; composer validate --strict --no-check-publish; composer check-platform-reqs; git diff --check; git diff --stat; git diff -- composer.json composer.lock'"
+      ]
+    },
+    "pass": false,
+    "label": "codex-composer-direct-without-1",
+    "agent": "codex",
+    "fixture": "composer-direct",
+    "condition": "without",
+    "run": 1,
+    "agent_exit": 0,
+    "seconds": 72
+  }
+]

@@ -1,0 +1,1 @@
+{"name":"x/c1","require":{"php":">=8.1","guzzlehttp/guzzle":"^7.4"},"config":{"platform":{"php":"8.2.0"}}}

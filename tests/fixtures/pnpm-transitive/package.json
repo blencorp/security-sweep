@@ -1,0 +1,9 @@
+{
+  "name": "fixture-pnpm-transitive",
+  "version": "1.0.0",
+  "private": true,
+  "description": "pnpm: transitive dependency (mkdirp -> minimist ^1.2.5) fixable without touching the parent.",
+  "dependencies": {
+    "mkdirp": "0.5.5"
+  }
+}

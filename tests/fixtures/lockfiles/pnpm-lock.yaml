@@ -1,0 +1,43 @@
+lockfileVersion: '9.0'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
+importers:
+
+  .:
+    dependencies:
+      minimist:
+        specifier: 1.2.5
+        version: 1.2.5
+      mkdirp:
+        specifier: 0.5.5
+        version: 0.5.5
+    devDependencies:
+      ejs:
+        specifier: ^2.7.4
+        version: 2.7.4
+
+packages:
+
+  ejs@2.7.4:
+    resolution: {integrity: sha512-7vmuyh5+kuUyJKePhQfRQBhXV5Ce+RnaeeQArKu1EAMpL3WbgMt5WG6uQZpEVvYSSsxMXRKOewtDk9RaTKXRlA==}
+    engines: {node: '>=0.10.0'}
+
+  minimist@1.2.5:
+    resolution: {integrity: sha512-FM9nNUYrRBAELZQT3xeZQ7fmMOBg6nWNmJKTcgsJeaLstP/UODVpGsr5OhXhhXg6f+qtJ8uiZ+PUxkDWcgIXLw==}
+
+  mkdirp@0.5.5:
+    resolution: {integrity: sha512-NKmAlESf6jMGym1++R0Ra7wvhV+wFW63FaSOFPwRahvea0gMUcGUhVeAg/0BC0wiv9ih5NYPB1Wn1UEI1/L+xQ==}
+    hasBin: true
+
+snapshots:
+
+  ejs@2.7.4: {}
+
+  minimist@1.2.5: {}
+
+  mkdirp@0.5.5:
+    dependencies:
+      minimist: 1.2.5

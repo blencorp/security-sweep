@@ -1,0 +1,9 @@
+{
+  "name": "fixture-yarn-transitive",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Yarn 1: transitive minimist 1.2.5 under mkdirp; `yarn upgrade minimist` does nothing, so the plan drops the lockfile entry and reinstalls.",
+  "dependencies": {
+    "mkdirp": "0.5.5"
+  }
+}
