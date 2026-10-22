@@ -109,23 +109,18 @@ Other things to know:
 
 Two sample projects plus a trap (`tests/fixtures/trap`). In the trap, `npm audit fix --force` upgrades ejs from 2.7.4 to 7.x, which removes the template include the app uses and breaks its test. Each agent is run with and without the skill. Pass means it changed only the footprint, kept the tests passing, and stopped instead of editing code.
 
-Claude Code 2.1.308 with `claude-opus-5-5`, Oct 22 2026, **1 run per cell** ([raw results](evals/agent-check/results/2026-10-22-claude-code-2.1.308/)):
+Oct 22 2026, security-sweep 1.0.0. Claude Code 2.1.308 with `claude-opus-5-5`, and Codex CLI 0.163.0 with `gpt-6-astra` (reasoning effort high). **3 runs with the skill and 1 without, per fixture and agent: 24 sessions** ([raw results](evals/agent-check/results/2026-10-22-v1.0.0/)).
 
-| Fixture | Skill | Passed | Fixed | Footprint | No code edit | No major | Tests | No forbidden cmd |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| trap | with | 1/1 | 1/1 | 1/1 | 1/1 | 1/1 | 1/1 | 1/1 |
-| trap | without | 0/1 | 1/1 | 0/1 | 1/1 | 1/1 | 1/1 | 1/1 |
-| npm-transitive | with | 1/1 | 1/1 | 1/1 | 1/1 | 1/1 | n/a | 1/1 |
-| npm-transitive | without | 0/1 | 1/1 | 1/1 | 1/1 | 1/1 | n/a | 0/1 |
-| composer-direct | with | 1/1 | 1/1 | 1/1 | 1/1 | 1/1 | n/a | 1/1 |
-| composer-direct | without | 0/1 | 1/1 | 0/1 | 1/1 | 1/1 | n/a | 1/1 |
+| Agent | Fixture | With skill | Without skill |
+| --- | --- | --- | --- |
+| Claude Code | trap | 3/3 | 0/1: minimist 1.2.8 instead of 1.2.6 |
+| Claude Code | npm-transitive | 3/3 | 0/1: ran a bare `npm audit fix` |
+| Claude Code | composer-direct | 3/3 | 0/1: dompdf v2.0.8 instead of v2.0.3 |
+| Codex | trap | 3/3 | 0/1: minimist 1.2.8 instead of 1.2.6 |
+| Codex | npm-transitive | 3/3 | 1/1 |
+| Codex | composer-direct | 3/3 | 0/1: dompdf v2.0.8 instead of v2.0.3, and edited `composer.json` |
 
-What the agent did without the skill:
-- **trap:** installed minimist 1.2.8 instead of 1.2.6, so the change was larger than needed. It did *not* run `npm audit fix --force` and did not break the test.
-- **npm-transitive:** ran a bare `npm audit fix`.
-- **composer-direct:** ran `composer update dompdf/dompdf --with-dependencies --no-blocking` and landed on v2.0.8 instead of v2.0.3.
-
-With the skill, all three runs followed the scan → plan → `plan --fix` → apply → check → test → record loop and changed exactly the planned footprint. These are single runs on one agent. Codex and repeated runs are still to do before release. The harness is in [`evals/agent-check`](evals/agent-check).
+With the skill, all 18 runs passed every criterion: the fix landed, only the planned footprint changed, no code was edited, no major version was crossed, tests passed, and no forbidden command ran. Without it, both agents fixed every issue, but usually with a bigger change than needed or a forbidden command. Neither agent ran `npm audit fix --force` or broke the trap's test. So the measured benefit is smaller, rule-following changes, not avoiding a breakage that happened here. Codex without the skill got npm-transitive right, so that fixture doesn't separate the two conditions for Codex. One run without the skill per cell shows what an agent tends to do, not how often. The harness is in [`evals/agent-check`](evals/agent-check).
 
 ## Development
 
