@@ -31,10 +31,10 @@ The expected footprint is computed by `security-sweep plan` on a pristine copy r
 
 ```bash
 python3 evals/agent-check/run.py --dry-run                      # harness test: no agent, no cost
-python3 evals/agent-check/run.py --agent claude --runs 1         # 6 sessions: 3 fixtures x with/without
-python3 evals/agent-check/run.py --agent codex --conditions without
+python3 evals/agent-check/run.py --agent claude --runs with=3,without=1   # 12 sessions
+python3 evals/agent-check/run.py --agent codex --runs with=3,without=1
 ```
 
 Every session is a real, billed agent run (Claude sessions are capped with `--budget`, default $15). Agents run with permission prompts disabled inside a throwaway temp directory. Results, transcripts and a markdown table go to `evals/runs/<timestamp>/` (git-ignored). Copy the table into the README for a release.
 
-Codex: installing the skill for a Codex session is not automated yet. Install it for Codex by hand (`npx skills add blencorp/security-sweep` and choose Codex) before running `--conditions with`.
+Codex sessions run with an isolated `CODEX_HOME` holding only your `auth.json` and the top-level `model` / `model_reasoning_effort` from your `~/.codex/config.toml`. Your own Codex skills, memories and `AGENTS.md` don't take part. In "with" runs, the skill is installed into that home's `skills/`. Both agents run with approvals and sandbox off (network access is required) inside throwaway temp copies.

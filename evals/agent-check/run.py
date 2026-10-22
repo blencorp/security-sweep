@@ -72,12 +72,36 @@ def sh(cmd, cwd, env=None, timeout=900, check=True):
     return p.returncode, p.stdout.decode("utf-8", "replace")
 
 
-def prepare(fixture, workdir, with_skill):
+def codex_home(workdir, with_skill):
+    """An isolated CODEX_HOME: the user's login and model settings only, so
+    their own skills, memories and AGENTS.md don't affect the comparison."""
+    src = os.environ.get("CODEX_HOME") or os.path.join(os.path.expanduser("~"), ".codex")
+    home = os.path.join(workdir, "codex-home")
+    os.makedirs(os.path.join(home, "skills"))
+    shutil.copyfile(os.path.join(src, "auth.json"), os.path.join(home, "auth.json"))
+    keep = []
+    cfg = os.path.join(src, "config.toml")
+    if os.path.exists(cfg):
+        with open(cfg) as f:
+            for line in f:
+                if line.startswith("["):
+                    break  # only top-level keys
+                if re.match(r"^(model|model_reasoning_effort)\s*=", line):
+                    keep.append(line)
+    with open(os.path.join(home, "config.toml"), "w") as f:
+        f.writelines(keep)
+    if with_skill:
+        shutil.copytree(SKILL, os.path.join(home, "skills", "security-sweep"),
+                        ignore=shutil.ignore_patterns("__pycache__"))
+    return home
+
+
+def prepare(fixture, workdir, with_skill, agent="claude"):
     repo = os.path.join(workdir, "project")
     shutil.copytree(os.path.join(FIXTURES, fixture), repo)
     with open(os.path.join(repo, ".gitignore"), "a") as f:
         f.write("node_modules/\nvendor/\n__pycache__/\n")
-    if with_skill:
+    if with_skill and agent == "claude":
         shutil.copytree(SKILL, os.path.join(repo, ".claude", "skills", "security-sweep"),
                         ignore=shutil.ignore_patterns("__pycache__"))
     sh(["git", "init", "-q"], repo)
@@ -118,14 +142,19 @@ def run_agent(agent, repo, transcript, model=None, budget=None, env=None):
         if budget:
             cmd += ["--max-budget-usd", str(budget)]
     elif agent == "codex":
-        cmd = ["codex", "exec", "--json", "--full-auto", "--skip-git-repo-check", PROMPT]
+        # Network is needed (registries, OSV), so Codex's network-less sandbox
+        # can't be used; the session runs in a throwaway temp copy instead.
+        cmd = ["codex", "exec", "--json", "--skip-git-repo-check", "--dangerously-bypass-approvals-and-sandbox",
+               "-C", repo]
         if model:
             cmd += ["--model", model]
+        cmd.append(PROMPT)
     else:
         raise ValueError(agent)
     start = datetime.datetime.now()
     with open(transcript, "wb") as out:
-        p = subprocess.run(cmd, cwd=repo, stdout=out, stderr=subprocess.STDOUT, timeout=3600, env=env)
+        p = subprocess.run(cmd, cwd=repo, stdin=subprocess.DEVNULL, stdout=out, stderr=subprocess.STDOUT,
+                           timeout=3600, env=env)
     return p.returncode, (datetime.datetime.now() - start).total_seconds()
 
 
@@ -143,7 +172,7 @@ def commands_from_transcript(path):
                 if block.get("type") == "tool_use" and block.get("name") == "Bash":
                     cmds.append(block.get("input", {}).get("command", ""))
             item = ev.get("item") or {}
-            if item.get("type") in ("command_execution", "local_shell_call"):
+            if ev.get("type") == "item.completed" and item.get("type") in ("command_execution", "local_shell_call"):
                 cmds.append(item.get("command") or json.dumps(item.get("action", "")))
     return cmds
 
@@ -161,6 +190,10 @@ def session_info(path):
                 subtype = ev.get("subtype")
             if ev.get("type") == "system" and ev.get("subtype") == "init":
                 model = ev.get("model")
+            if ev.get("type") == "turn.completed":
+                subtype = "success"
+            if ev.get("type") in ("turn.failed", "error"):
+                subtype = "error"
             content = (ev.get("message") or {}).get("content")
             for block in content if isinstance(content, list) else []:
                 if block.get("type") != "tool_use":
@@ -285,12 +318,19 @@ def rescore(out):
     print(table(results))
 
 
+def runs_for(spec, cond):
+    if "=" not in spec:
+        return int(spec)
+    parts = dict(p.split("=", 1) for p in spec.split(","))
+    return int(parts.get(cond, 1))
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--agent", default="claude", choices=["claude", "codex"])
     ap.add_argument("--fixtures", default="trap,npm-transitive,composer-direct")
     ap.add_argument("--conditions", default="with,without")
-    ap.add_argument("--runs", type=int, default=1)
+    ap.add_argument("--runs", default="1", help="runs per cell: N, or per condition like with=3,without=1")
     ap.add_argument("--model")
     ap.add_argument("--budget", type=float, default=15.0, help="max USD per Claude session")
     ap.add_argument("--out")
@@ -299,29 +339,32 @@ def main():
     args = ap.parse_args()
     if args.rescore:
         return rescore(args.rescore)
-    if args.agent == "codex" and "with" in args.conditions.split(","):
-        sys.exit("codex: installing the skill for a Codex session is not automated yet; run --conditions without "
-                 "or install the skill for Codex by hand (see README)")
     stamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     out = args.out or os.path.join(ROOT, "evals", "runs", stamp)
     os.makedirs(out, exist_ok=True)
     results = []
     for fixture in args.fixtures.split(","):
         for cond in args.conditions.split(","):
-            for n in range(1, args.runs + 1):
+            for n in range(1, runs_for(args.runs, cond) + 1):
                 label = "%s-%s-%s-%d" % (args.agent, fixture, cond, n)
                 work = tempfile.mkdtemp(prefix="agent-check-")
                 try:
                     exp = expected(fixture, work)
-                    repo = prepare(fixture, work, cond == "with")
+                    repo = prepare(fixture, work, cond == "with", args.agent)
                     transcript = os.path.join(out, label + ".jsonl")
                     if args.dry_run:
                         open(transcript, "w").close()
                         rc, secs = 0, 0
                     else:
                         env = dict(os.environ, SECURITY_SWEEP_HOME=os.path.join(work, "agent-sweep-home"))
+                        if args.agent == "codex":
+                            env["CODEX_HOME"] = codex_home(work, cond == "with")
                         rc, secs = run_agent(args.agent, repo, transcript, args.model, args.budget, env)
                     r = score(repo, exp, transcript)
+                    if args.agent == "codex" and not args.dry_run:
+                        with open(os.path.join(env["CODEX_HOME"], "config.toml")) as f:
+                            m = re.search(r'^model\s*=\s*"([^"]+)"', f.read(), re.M)
+                        r["model"] = args.model or (m.group(1) if m else "codex default")
                     r.update({"label": label, "agent": args.agent, "fixture": fixture, "condition": cond,
                               "run": n, "agent_exit": rc, "seconds": round(secs)})
                     _, diff = sh(["git", "diff", "--stat"], repo, check=False)
