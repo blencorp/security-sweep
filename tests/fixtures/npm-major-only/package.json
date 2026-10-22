@@ -1,0 +1,9 @@
+{
+  "name": "fixture-npm-major-only",
+  "version": "1.0.0",
+  "private": true,
+  "description": "ejs 2.x has a critical advisory fixed only in 3.x: must report needs approval, not upgrade.",
+  "dependencies": {
+    "ejs": "^2.7.4"
+  }
+}

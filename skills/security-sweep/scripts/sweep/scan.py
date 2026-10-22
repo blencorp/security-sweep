@@ -133,6 +133,7 @@ def runtime_issue(rt, named):
         "origin": rt["origin"],
         "source": rt["source"],
         "line": rt["line"],
+        "end_line": rt.get("end_line", rt["line"]),
         "text": rt["text"],
         "version": rt["declared"],
         "branch": rt.get("branch"),

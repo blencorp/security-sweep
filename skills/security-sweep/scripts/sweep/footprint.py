@@ -24,7 +24,10 @@ CONFIG_FILES = {
 
 NPM_FLAGS = ["--package-lock-only", "--ignore-scripts", "--no-audit", "--no-fund"]
 PNPM_FLAGS = ["--lockfile-only", "--ignore-scripts", "--ignore-pnpmfile"]
-COMPOSER_FLAGS = ["--no-install", "--no-scripts", "--no-plugins", "--no-interaction", "--no-audit"]
+# ext-* requirements are ignored only while resolving: the machine computing
+# the footprint is not production. `composer install` still enforces them.
+COMPOSER_FLAGS = ["--no-install", "--no-scripts", "--no-plugins", "--no-interaction", "--no-audit",
+                  "--ignore-platform-req=ext-*"]
 
 MATERIALIZE = {
     "npm": ["npm", "ci"],

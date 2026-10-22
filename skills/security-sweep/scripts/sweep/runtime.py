@@ -103,10 +103,10 @@ def _logical_lines(path):
             buf += s[:-1] + " "
             continue
         buf += s
-        yield start, buf.strip(), raw[start - 1]
+        yield start, i, buf.strip(), raw[start - 1]
         buf, start = "", None
     if buf:
-        yield start, buf.strip(), raw[start - 1]
+        yield start, len(raw), buf.strip(), raw[start - 1]
 
 
 def _subst(text, args):
@@ -118,7 +118,7 @@ def _dockerfile(path, rel):
     out = []
     args = {}
     stage = None
-    for line_no, text, first_raw in _logical_lines(path):
+    for line_no, end_no, text, first_raw in _logical_lines(path):
         inst = text.split(None, 1)
         if not inst:
             continue
@@ -143,7 +143,9 @@ def _dockerfile(path, rel):
                 out.append(_decl(img, rel, line_no, first_raw, ver.group(1) if ver else None,
                                  "official-image", image=img, tag=tag or "latest"))
         elif cmd == "RUN" and stage and stage.get("distro"):
-            out.extend(_distro_packages(rest, stage["distro"], rel, line_no, first_raw))
+            for d in _distro_packages(rest, stage["distro"], rel, line_no, first_raw):
+                d["end_line"] = end_no
+                out.append(d)
     return out
 
 
@@ -275,7 +277,9 @@ def php_active_branches():
 def php_releases(branch):
     """[(version, date)] for a branch, ascending."""
     cl = _php_changelog(branch.split(".")[0])
-    rel = [(v, d["date"]) for v, d in cl.items() if v.startswith(branch + ".")]
+    cutoff = net.now()
+    rel = [(v, d["date"]) for v, d in cl.items() if v.startswith(branch + ".")
+           and not (d["date"] and net.parse_time(d["date"] + "T00:00:00Z") > cutoff)]
     return sorted(rel, key=lambda x: versions.composer_key(x[0]))
 
 
@@ -284,8 +288,11 @@ def _php_advisories(installed):
     cl = _php_changelog(installed.split(".")[0])
     inst = versions.composer_key(installed)
     fixed_in = {}
+    cutoff = net.now()
     for ver, data in sorted(cl.items(), key=lambda x: versions.composer_key(x[0])):
         if not ver.startswith(branch + ".") or versions.composer_key(ver) <= inst:
+            continue
+        if data["date"] and net.parse_time(data["date"] + "T00:00:00Z") > cutoff:
             continue
         for cve in data["cves"]:
             fixed_in.setdefault(cve, ver)
@@ -306,7 +313,8 @@ def node_releases():
         data = net.get_json(NODE_DIST, source="nodejs.org")
         rel = [(d["version"].lstrip("v"), d.get("date"), bool(d.get("security"))) for d in data]
         _cache["node-dist"] = sorted(rel, key=lambda x: versions.semver_key(x[0]))
-    return _cache["node-dist"]
+    cutoff = net.now()
+    return [r for r in _cache["node-dist"] if not (r[1] and net.parse_time(r[1] + "T00:00:00Z") > cutoff)]
 
 
 def node_eol(major):

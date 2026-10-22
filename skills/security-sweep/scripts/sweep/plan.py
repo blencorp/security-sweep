@@ -400,7 +400,7 @@ def _no_fix_text(issue, skipped):
 
 def _issue_summary(issue):
     keep = ("id", "kind", "tier", "ecosystem", "manager", "lockfile", "manifest", "package", "version", "direct",
-            "dev", "runtime", "origin", "source", "line", "branch", "image", "tag", "distro", "eol")
+            "dev", "runtime", "origin", "source", "line", "end_line", "branch", "image", "tag", "distro", "eol")
     out = {k: issue[k] for k in keep if k in issue}
     out["advisories"] = [{"id": a["id"], "cves": a.get("cves", []), "severity": a.get("severity"),
                           "score": a.get("score"), "kev": a.get("kev"), "fixed_in": a.get("fixed_in")}
@@ -477,6 +477,12 @@ def _line_edit(ctx, issue, p, new_version, approvals):
         before = f.read()
     lines = before.decode("utf-8").splitlines(True)
     idx = issue["line"] - 1
+    if issue["origin"] == "distro":
+        # A RUN instruction can span several lines; edit the one with the pin.
+        for j in range(idx, min(issue.get("end_line", issue["line"]), len(lines))):
+            if "=" + issue["version"] in lines[j]:
+                idx = j
+                break
     old_line = lines[idx]
     if issue["origin"] == "official-image":
         new_line = old_line.replace(":" + issue["tag"], ":" + runtime.retag(issue["tag"], new_version), 1)
@@ -488,12 +494,12 @@ def _line_edit(ctx, issue, p, new_version, approvals):
         new_line = old_line.replace(issue["version"], new_version, 1)
     if new_line == old_line:
         p.update(status=STATUS_ERROR, detail="could not locate the version on %s line %d"
-                 % (issue["source"], issue["line"]))
+                 % (issue["source"], idx + 1))
         return p
     lines[idx] = new_line
     after = "".join(lines).encode("utf-8")
     p["approach"] = "edit-line"
-    p["edit"] = {"file": issue["source"], "line": issue["line"],
+    p["edit"] = {"file": issue["source"], "line": idx + 1,
                  "from": old_line.rstrip("\r\n"), "to": new_line.rstrip("\r\n")}
     p["footprint"] = {"files": [issue["source"]], "entries": [], "added": [], "removed": []}
     p["_expected"] = {issue["source"]: after}
