@@ -108,7 +108,7 @@ APPROVAL_TEXT = {
     "major": "crosses a major version",
     "line": "needs a newer release line",
     "cooldown": "uses a version younger than the cooldown (allowed only because the issue is on CISA KEV)",
-    "footprint": "footprint cannot be computed in advance for this package manager",
+    "footprint": "footprint cannot be computed in advance for this package manager (approve with --approve footprint)",
 }
 
 

@@ -345,6 +345,45 @@ class NoLockfileTest(FixtureTest):
         self.assertNotIn(" clean", md.replace("Do not call this project clean", ""))
 
 
+class YarnClassicTest(FixtureTest):
+    fixture = "yarn-classic"
+
+    def test_version_planned_footprint_needs_approval(self):
+        code, s = self.scan()
+        self.assertEqual(s["critical"][0]["manager"], "yarn-classic")
+        code, p = self.plan()
+        fx = self.only_fix(p)
+        self.assertEqual(fx["status"], "needs_approval")
+        self.assertIn("footprint", fx["approvals_needed"])
+        self.assertEqual(fx["target"]["to"], "1.2.6")
+        self.assertIsNone(fx["footprint"]["entries"])
+
+    def _edit_lock(self, old, new):
+        p = os.path.join(self.repo, "yarn.lock")
+        with open(p) as f:
+            text = f.read()
+        with open(p, "w") as f:
+            f.write(text.replace(old, new))
+
+    def test_check_allows_only_the_target_package(self):
+        self.scan()
+        self.plan()
+        self._edit_lock('version "1.2.5"', 'version "1.2.6"')
+        code, res = self.sweep("check", "C1", "--repo", self.repo, "--json")
+        self.assertEqual(res["status"], "applied_without_approval")
+        self._edit_lock('version "1.2.6"', 'version "1.2.5"')
+        code, p = self.plan("--fix", "C1", "--approve", "footprint")
+        self.assertEqual(self.only_fix(p)["status"], "ready")
+        self._edit_lock('minimist@1.2.5:\n  version "1.2.5"', 'minimist@1.2.6:\n  version "1.2.6"')
+        self._edit_lock("minimist-1.2.5.tgz", "minimist-1.2.6.tgz")
+        code, res = self.sweep("check", "C1", "--repo", self.repo, "--json")
+        self.assertTrue(res["scope"]["ok"], res["scope"])
+        self._edit_lock('version "2.1.2"', 'version "2.1.3"')
+        code, res = self.sweep("check", "C1", "--repo", self.repo, "--json")
+        self.assertEqual(res["status"], "out_of_scope")
+        self.assertIn("ms 2.1.3", [x["item"] for x in res["scope"]["inside"]])
+
+
 class LiveCommandsMixin(object):
     """Run the prescribed commands in the real project and check the result
     matches the footprint computed in the scratch copy."""

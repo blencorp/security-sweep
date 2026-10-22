@@ -101,6 +101,17 @@ def scope(repo, fix_dir, fx):
             except (ValueError, lockfiles.LockfileError) as e:
                 probs = [{"path": rel, "item": rel, "problem": "cannot parse: %s" % e}]
             inside.extend(probs)
+        elif base in MANIFEST_NAMES and expected is None and before_bytes is not None:
+            # Footprint not computed in advance (Yarn): only keys naming the
+            # target package may change.
+            names = set((fx.get("footprint") or {}).get("names_only") or [])
+            try:
+                diffs = _json_diff(json.loads(before_bytes.decode("utf-8")), json.loads(now_bytes.decode("utf-8")))
+            except ValueError as e:
+                diffs = ["(invalid JSON: %s)" % e]
+            for k in diffs:
+                if not any(k == n or k.endswith("." + n) or k.endswith("/" + n) for n in names):
+                    inside.append({"path": rel, "item": k, "problem": "changed outside the target package"})
         elif base in MANIFEST_NAMES and expected is not None:
             try:
                 diffs = _json_diff(json.loads(expected.decode("utf-8")), json.loads(now_bytes.decode("utf-8")))

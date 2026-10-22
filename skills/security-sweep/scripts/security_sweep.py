@@ -42,8 +42,9 @@ def main(argv=None):
     pl.add_argument("--repo", default=".", help="project directory (default: .)")
     pl.add_argument("--fix", metavar="ID", help="plan (or re-plan) one issue against the current project")
     pl.add_argument("--include-high", action="store_true", help="also plan high-severity issues")
-    pl.add_argument("--approve", action="append", default=[], choices=["major", "cooldown"],
-                    help="user approved crossing a major/release line, or (KEV only) a version younger than the cooldown")
+    pl.add_argument("--approve", action="append", default=[], choices=["major", "cooldown", "footprint"],
+                    help="what the user explicitly approved for this fix: crossing a major version, (KEV only) "
+                         "a version younger than the cooldown, or (Yarn) a footprint not computed in advance")
     pl.add_argument("--cooldown", type=int, default=7, metavar="DAYS")
     pl.add_argument("--json", action="store_true")
 

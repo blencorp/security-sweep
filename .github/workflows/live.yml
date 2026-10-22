@@ -1,0 +1,37 @@
+name: live
+
+# Runs the fixture tests against live data once a day, including the real
+# npm/composer commands in project copies. Failures mean either the data
+# changed an answer (update the test and the recordings) or a source broke.
+
+on:
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  live:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5.6.0
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4.4.0
+        with:
+          node-version: "22"
+      - uses: shivammathur/setup-php@d52fc211a0436f8839a587b3b5b8efddab4744ea  # v2
+        with:
+          php-version: "8.3"
+          tools: composer:v2
+      - name: Install pnpm and yarn
+        run: npm install -g pnpm@10 yarn@1
+      - name: Live fixture tests
+        env:
+          SECURITY_SWEEP_LIVE: "1"
+        run: python -m unittest tests.test_fixtures -v

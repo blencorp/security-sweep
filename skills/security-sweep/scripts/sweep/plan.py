@@ -251,11 +251,16 @@ def plan_package(ctx, issue):
     try:
         footprint.tool_of(issue["manager"])
     except footprint.Unavailable as e:
-        p.update(status=STATUS_APPROVAL, approvals_needed=sorted(set(need) | {"footprint"}),
+        files = [issue["lockfile"]] + ([issue["manifest"]] if issue.get("manifest") else [])
+        need = sorted(set(need) | ({"footprint"} - ctx.approvals))
+        p.update(status=STATUS_APPROVAL if need else STATUS_READY, approvals_needed=need,
                  detail=str(e), approach="manual",
-                 footprint={"files": [issue["lockfile"]] + ([issue["manifest"]] if issue.get("manifest") else []),
-                            "entries": None, "names_only": [issue["package"]]},
+                 footprint={"files": sorted(files), "entries": None, "names_only": [issue["package"]]},
                  steps=_manual_steps(issue, target))
+        p["_before"] = {}
+        for rel in files:
+            with open(os.path.join(ctx.repo, rel), "rb") as f:
+                p["_before"][rel] = f.read()
         return p
 
     vulnerable_keys = {e["key"] for e in vulnerable}

@@ -1,0 +1,10 @@
+{
+  "name": "fixture-yarn-classic",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Yarn classic: the fix version is planned, but the footprint cannot be computed without installing.",
+  "dependencies": {
+    "minimist": "1.2.5",
+    "ms": "2.1.2"
+  }
+}
