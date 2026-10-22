@@ -16,7 +16,6 @@ For a runtime issue: the smallest release in the same line that fixes every
 critical advisory; the footprint is one line of one file.
 """
 
-import datetime
 import os
 import re
 
@@ -612,7 +611,3 @@ def run(repo, scan_result, run_dir, fix_id=None, include_high=False, approvals=(
         "planned_at": ctx.now.strftime("%Y-%m-%dT%H:%M:%SZ"),
         "fixes": fixes,
     }
-
-
-def days_until(published, cooldown, now):
-    return published + datetime.timedelta(days=cooldown) - now

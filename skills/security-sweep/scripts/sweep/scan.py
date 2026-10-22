@@ -5,7 +5,6 @@ High-severity issues are listed separately and are not planned for fixing
 unless the user asks. Any data source that fails makes the result INCOMPLETE.
 """
 
-import json
 import os
 
 from . import __version__, kev, lockfiles, net, osv, runtime, tools
@@ -238,7 +237,3 @@ def _max_version(rt, origin, vs):
         return best
     key = versions.semver_key if rt == "node" else versions.composer_key
     return max(vs, key=key)
-
-
-def dumps(result):
-    return json.dumps(result, indent=2)
