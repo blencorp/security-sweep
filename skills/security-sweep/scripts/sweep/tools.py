@@ -102,7 +102,7 @@ def osv_scan_lockfile(basename, content):
     binary = None if mode else ensure_osv_scanner()
     res = net.run_tool(
         "osv-scanner",
-        ["scan", "source", "--lockfile", basename, "--format", "json", "--verbosity", "error"],
+        [["scan", "source", "--lockfile", basename, "--format", "json", "--verbosity", "error"]],
         {basename: content}, [], binary=binary)
     # 0 = nothing found, 1 = vulnerabilities found, 128 = no packages found.
     if res.code not in (0, 1, 128):

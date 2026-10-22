@@ -204,10 +204,11 @@ class ToolResult(object):
         self.code, self.stdout, self.stderr, self.files = code, stdout, stderr, files
 
 
-def run_tool(name, argv, inputs, outputs, env=None, binary=None, timeout=600):
+def run_tool(name, steps, inputs, outputs, env=None, binary=None, timeout=600):
     """Run a tool in a fresh scratch directory and return its result.
 
-    argv     arguments after the program name, relative to the scratch dir
+    steps    list of argument lists (after the program name), run in order in
+             the same scratch dir; stops at the first non-zero exit
     inputs   {relative path: bytes} written into the scratch dir first
     outputs  relative paths whose content after the run is returned
     binary   path to the executable (defaults to looking up `name` on PATH)
@@ -217,7 +218,9 @@ def run_tool(name, argv, inputs, outputs, env=None, binary=None, timeout=600):
     command and the exact input bytes.
     """
     mode, d = _mode()
-    parts = [name] + list(argv)
+    parts = [name]
+    for argv in steps:
+        parts.extend(list(argv) + ["\x1e"])
     for rel in sorted(inputs):
         parts.extend([rel, inputs[rel]])
     rkey = _key(*parts)
@@ -238,12 +241,17 @@ def run_tool(name, argv, inputs, outputs, env=None, binary=None, timeout=600):
                 f.write(content)
         full_env = dict(os.environ)
         full_env.update(env or {})
-        try:
-            proc = subprocess.run([exe] + list(argv), cwd=scratch, env=full_env,
-                                  stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                  timeout=timeout)
-        except subprocess.TimeoutExpired:
-            raise SourceError(name, "timed out after %ss" % timeout)
+        code, out, err = 0, b"", b""
+        for argv in steps:
+            try:
+                proc = subprocess.run([exe] + list(argv), cwd=scratch, env=full_env,
+                                      stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                      timeout=timeout)
+            except subprocess.TimeoutExpired:
+                raise SourceError(name, "timed out after %ss" % timeout)
+            code, out, err = proc.returncode, out + proc.stdout, err + proc.stderr
+            if code != 0:
+                break
         files = {}
         for rel in outputs:
             p = os.path.join(scratch, rel)
@@ -252,12 +260,11 @@ def run_tool(name, argv, inputs, outputs, env=None, binary=None, timeout=600):
                     files[rel] = f.read()
             else:
                 files[rel] = None
-        res = ToolResult(proc.returncode, proc.stdout.decode("utf-8", "replace"),
-                         proc.stderr.decode("utf-8", "replace"), files)
+        res = ToolResult(code, out.decode("utf-8", "replace"), err.decode("utf-8", "replace"), files)
     finally:
         shutil.rmtree(scratch, ignore_errors=True)
     if mode == "record":
-        _save(d, rkey, {"argv": parts[:len(argv) + 1], "code": res.code, "stdout": res.stdout,
+        _save(d, rkey, {"argv": [name] + [list(a) for a in steps], "code": res.code, "stdout": res.stdout,
                         "stderr": res.stderr[-20000:],
                         "files": {k: (base64.b64encode(v).decode("ascii") if v is not None else None)
                                   for k, v in res.files.items()}})

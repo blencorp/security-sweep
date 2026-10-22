@@ -49,3 +49,16 @@ def write_text(path, text):
 def read_json(path):
     with open(path) as f:
         return json.load(f)
+
+
+def next_seq(run_dir):
+    """A counter that orders plans and check results within a run directory
+    (wall-clock time is not reliable for this; tests pin the clock)."""
+    path = os.path.join(run_dir, "seq")
+    n = 0
+    if os.path.exists(path):
+        with open(path) as f:
+            n = int(f.read().strip() or 0)
+    n += 1
+    write_text(path, str(n))
+    return n

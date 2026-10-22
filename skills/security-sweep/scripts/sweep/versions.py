@@ -185,7 +185,8 @@ def _parse_set(text):
                 cmps.append(_Cmp("<=", _v(*b)))
         return cmps
     cmps = []
-    for m in _TOKEN.finditer(text):
+    for tok in text.split():
+        m = _TOKEN.match(tok)
         op = (m.group(1) or "").replace("~>", "~")
         cmps.extend(_expand_simple(op, m.group(2)))
     return cmps
@@ -508,6 +509,8 @@ def apk_compare(a, b):
                 key.append((0 if p[1:2] != "p" or p.startswith("_pre") else 2, 0, p))
             else:
                 key.append((1, 0, p))
+        # End marker: sorts after _alpha/_rc suffixes, before _p and more digits.
+        key.append((1, -1, ""))
         return key, rel
 
     ka, ra = split(a)
