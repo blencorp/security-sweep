@@ -19,6 +19,7 @@ Include what you ran, what happened, and what you expected. We aim to acknowledg
 ## Out of scope
 
 - Vulnerabilities in the projects you scan. That is what the tool reports.
+- Vulnerable packages under `tests/fixtures/`. They are vulnerable on purpose, as test inputs.
 - Wrong or missing data in OSV, CISA KEV, php.net, nodejs.org or the registries. Please report those upstream. A case where security-sweep reports such a failure as clean instead of INCOMPLETE *is* in scope.
 
 ## Supported versions

@@ -1,0 +1,7 @@
+version: 2
+
+# tests/fixtures/ holds sample projects that are vulnerable on purpose: they
+# are the known-answer inputs for security-sweep's own tests. Nothing in them
+# is installed or shipped.
+projectIgnorePaths:
+  - "tests/fixtures"
