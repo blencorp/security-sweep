@@ -149,8 +149,8 @@ def commands_from_transcript(path):
 
 
 def session_info(path):
-    """(skill_used, end subtype) from the transcript."""
-    used, subtype = False, None
+    """(skill_used, end subtype, model) from the transcript."""
+    used, subtype, model = False, None, None
     with open(path, "rb") as f:
         for line in f:
             try:
@@ -159,6 +159,8 @@ def session_info(path):
                 continue
             if ev.get("type") == "result":
                 subtype = ev.get("subtype")
+            if ev.get("type") == "system" and ev.get("subtype") == "init":
+                model = ev.get("model")
             content = (ev.get("message") or {}).get("content")
             for block in content if isinstance(content, list) else []:
                 if block.get("type") != "tool_use":
@@ -168,7 +170,7 @@ def session_info(path):
                     used = True
             if "security_sweep.py" in json.dumps(ev.get("item") or {}):
                 used = True
-    return used, subtype
+    return used, subtype, model
 
 
 def changed(repo):
@@ -238,10 +240,11 @@ def score(repo, exp, transcript):
                 tests = rc == 0
     left = still_vulnerable(repo, exp)
     major = crossed_major(lock)
-    used, subtype = session_info(transcript)
+    used, subtype, model = session_info(transcript)
     result = {
         "skill_used": used,
         "end": subtype,
+        "model": model,
         "fixed": not left,
         "footprint": not outside_files and not outside_entries,
         "no_code_edit": not code_edits,
@@ -268,6 +271,7 @@ def rescore(out):
         t = os.path.join(out, r["label"] + ".jsonl")
         if "details" not in r or not os.path.exists(t):
             continue
+        r["skill_used"], r["end"], r["model"] = session_info(t)
         cmds = commands_from_transcript(t)
         forbidden = sorted({label for c in cmds for pat, label in FORBIDDEN if re.search(pat, c)})
         r["details"]["forbidden"] = forbidden

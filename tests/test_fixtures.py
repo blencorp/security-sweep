@@ -224,6 +224,32 @@ class NpmTransitiveTest(FixtureTest):
             self.assertEqual(fx["target"]["to"], "1.2.8")
 
 
+class PnpmTransitiveTest(FixtureTest):
+    fixture = "pnpm-transitive"
+
+    def test_refresh_without_touching_parent(self):
+        code, s = self.scan()
+        i = s["critical"][0]
+        self.assertEqual((i["manager"], i["package"], i["version"], i["direct"]), ("pnpm", "minimist", "1.2.5", False))
+        code, p = self.plan()
+        fx = self.only_fix(p)
+        self.assertEqual(fx["status"], "ready", fx)
+        self.assertEqual(fx["approach"], "refresh")
+        self.assertEqual(fx["steps"][0][:3], ["pnpm", "update", "minimist"])
+        self.assertEqual(fx["footprint"]["files"], ["pnpm-lock.yaml"])
+        self.assertEqual([e["name"] for e in fx["footprint"]["entries"]], ["minimist"])
+        self.assertEqual(fx["materialize"], ["pnpm", "install", "--frozen-lockfile"])
+        if not helpers.live():
+            self.assertEqual(fx["target"]["to"], "1.2.8")
+
+    def test_check_passes_for_exact_change(self):
+        self.scan()
+        self.plan()
+        self.apply_expected("C1")
+        code, res = self.sweep("check", "C1", "--repo", self.repo, "--json")
+        self.assertEqual(res["status"], "awaiting_tests", res)
+
+
 class NpmMajorOnlyTest(FixtureTest):
     fixture = "npm-major-only"
 
@@ -410,6 +436,12 @@ class LiveNpmDirect(LiveCommandsMixin, FixtureTest):
 @unittest.skipUnless(helpers.live(), "live only: runs real package managers in the project")
 class LiveNpmTransitive(LiveCommandsMixin, FixtureTest):
     fixture = "npm-transitive"
+    materialize_extra = ["--ignore-scripts"]
+
+
+@unittest.skipUnless(helpers.live(), "live only: runs real package managers in the project")
+class LivePnpmTransitive(LiveCommandsMixin, FixtureTest):
+    fixture = "pnpm-transitive"
     materialize_extra = ["--ignore-scripts"]
 
 

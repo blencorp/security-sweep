@@ -109,7 +109,7 @@ Other things to know:
 
 Two sample projects plus a trap (`tests/fixtures/trap`). In the trap, `npm audit fix --force` upgrades ejs from 2.7.4 to 7.x, which removes the template include the app uses and breaks its test. Each agent is run with and without the skill. Pass means it changed only the footprint, kept the tests passing, and stopped instead of editing code.
 
-Claude Code 2.1.308 (default model), Oct 22 2026, **1 run per cell**:
+Claude Code 2.1.308 with `claude-opus-5-5`, Oct 22 2026, **1 run per cell** ([raw results](evals/agent-check/results/2026-10-22-claude-code-2.1.308/)):
 
 | Fixture | Skill | Passed | Fixed | Footprint | No code edit | No major | Tests | No forbidden cmd |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
