@@ -9,7 +9,7 @@
 | Direct dependency | `npm install <pkg>@<ver> <save flags> --package-lock-only --ignore-scripts --no-audit --no-fund` | `pnpm add <pkg>@<ver> [--save-exact] --lockfile-only --ignore-scripts --ignore-pnpmfile` | `composer update <pkg> --with <pkg>:<ver> <flags>`; first `composer require <pkg>:<constraint> --no-update` only if the current constraint does not allow `<ver>` |
 | Transitive, parent's range allows the fix | `npm update <pkg> --package-lock-only ...` | `pnpm update <pkg> --depth Infinity --lockfile-only ...` | `composer update <pkg> --with <pkg>:<ver> <flags>` |
 | Transitive, parent's range blocks it | Smallest same-major parent version whose range allows the fix (direct parents only) | same | `composer update <parent> <pkg> --with <parent>:<pver> --with <pkg>:<ver> <flags>` |
-| Last resort | Scoped override: `npm pkg set 'overrides[<parent>][<pkg>]=<ver>'`, then `npm install --package-lock-only ...` | not supported: reported as blocked | Composer has no override: reported as blocked |
+| Last resort | Scoped override: `npm pkg set 'overrides[<parent>][<pkg>]=<ver>'`, then `npm install --package-lock-only ...` | Scoped override `'<parent>><pkg>': '<ver>'` written into `pnpm-workspace.yaml` (pnpm 10+) or `package.json` `pnpm.overrides` (older), then `pnpm install --lockfile-only ...` | Composer has no override: reported as blocked |
 | Install step afterwards | `npm ci` | `pnpm install --frozen-lockfile` | `composer install` |
 
 Save flags keep the project's style: an exact pin stays exact (`--save-exact`), `~` stays `~` (`--save-prefix=~`), anything else gets `^` (`--save-prefix=^`). `--save-dev` / `--save-optional` keep the dependency in its section.
@@ -26,6 +26,10 @@ Save flags keep the project's style: an exact pin stays exact (`--save-exact`), 
 - `--no-scripts --no-plugins` keep package code from running while the lockfile is resolved.
 
 Composer 2.2 or newer is required (`--with`).
+
+## File edits in a prompt
+
+Some fixes (pnpm overrides) include a step like *Replace the whole content of pnpm-workspace.yaml with exactly the lines between the markers*. Write exactly those lines, with no added indentation and a final newline. `check` compares the file byte for byte, because pnpm has no command that writes a `parent>pkg` override key.
 
 ## Yarn
 

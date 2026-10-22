@@ -77,6 +77,10 @@ def scan_markdown(s):
                                          ", %s packages" % lk["entries"] if lk.get("entries") is not None else ""))
     for nc in s["not_checked"]:
         out.append("- %s: NOT CHECKED, %s" % (nc["path"], nc["reason"]))
+    excluded = sum(lk.get("private_excluded") or 0 for lk in s["lockfiles"])
+    if s.get("private_patterns"):
+        out.append("- Private packages (%s): %d excluded by your setting; NOT CHECKED by public sources"
+                   % (", ".join(s["private_patterns"]), excluded))
     for rt in s["runtimes"]:
         line = "- %s %s from %s:%s (%s)" % (rt["runtime"], rt.get("declared") or "?", rt["source"], rt["line"],
                                             rt["origin"])
@@ -192,9 +196,16 @@ def prompt_text(fx, skill_dir, repo):
         lines.append("Change nothing else in that file or any other file.")
     else:
         base = os.path.dirname(i["lockfile"]) if i.get("lockfile") else ""
-        lines.append("Run exactly these commands, in order, from %s:" % os.path.join(repo, base) if base
-                     else "Run exactly these commands, in order, from %s:" % repo)
+        lines.append("Do exactly these steps, in order, from %s:" % os.path.join(repo, base) if base
+                     else "Do exactly these steps, in order, from %s:" % repo)
         n = 0
+        for rel, content in sorted((fx.get("write_files") or {}).items()):
+            n += 1
+            lines.append("  %d. Replace the whole content of %s with exactly the lines between the markers "
+                         "(no indentation added; end the file with a newline):" % (n, os.path.join(repo, rel)))
+            lines.append("----- begin %s -----" % rel)
+            lines.extend(content.splitlines())
+            lines.append("----- end %s -----" % rel)
         for s in fx.get("steps") or []:
             n += 1
             lines.append("  %d. %s" % (n, shell_join(s)))

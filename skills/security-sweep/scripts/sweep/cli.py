@@ -27,7 +27,7 @@ def cmd_scan(args):
         raise ValueError("not a directory: %s" % args.repo)
     out = state.run_dir(repo, args.out)
     state.check_outside(repo, out)
-    result = scan.run(repo, args.cve)
+    result = scan.run(repo, args.cve, args.private)
     state.write_json(os.path.join(out, "scan.json"), result)
     md = report.scan_markdown(result)
     state.write_text(os.path.join(out, "scan.md"), md)

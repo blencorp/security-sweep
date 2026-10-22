@@ -19,7 +19,7 @@ critical advisory; the footprint is one line of one file.
 import os
 import re
 
-from . import footprint, lockfiles, net, osv, registry, runtime, snapshot, state, versions
+from . import footprint, lockfiles, net, osv, privacy, registry, runtime, snapshot, state, versions
 
 STATUS_READY = "ready"
 STATUS_APPROVAL = "needs_approval"
@@ -30,8 +30,9 @@ STATUS_ERROR = "incomplete"
 
 
 class Ctx(object):
-    def __init__(self, repo, cooldown, approvals):
+    def __init__(self, repo, cooldown, approvals, private=()):
         self.repo = repo
+        self.private = list(private)
         self.cooldown = cooldown
         self.approvals = set(approvals)
         self.now = net.now()
@@ -214,6 +215,11 @@ def _footprint_safety(ctx, issue, fp, advisories):
     wanted = _wanted(issue)
     for n, v in fp["diff"]["added"]:
         prev = removed.get(n, [None])[0]
+        if privacy.is_private(n, ctx.private):
+            results.append({"name": n, "from": prev, "to": v, "ok": True, "young": False, "remaining": [],
+                            "checks": [{"name": "private", "ok": True,
+                                        "detail": "private package: not checked against public sources"}]})
+            continue
         s = safety(ctx, eco, n, v, prev, wanted if n == issue["package"] else set(), _kev(issue))
         results.append({"name": n, "from": prev, "to": v, "ok": s["ok"], "young": s["young"],
                         "checks": s["checks"], "remaining": s["remaining"]})
@@ -267,22 +273,25 @@ def plan_package(ctx, issue):
     approaches = []
     cflags = ctx.cflags() if issue["manager"] == "composer" else None
     if is_direct:
-        approaches.append(("direct", footprint.direct_steps(issue["manager"], issue["package"], target, manifest, cflags)))
+        approaches.append(("direct", footprint.direct_steps(issue["manager"], issue["package"], target, manifest,
+                                                             cflags), None))
     else:
-        approaches.append(("refresh", footprint.refresh_steps(issue["manager"], issue["package"], target, cflags)))
+        approaches.append(("refresh", footprint.refresh_steps(issue["manager"], issue["package"], target, cflags),
+                           None))
     if not is_direct:
         for parent in _parents(entries, vulnerable_keys):
             pv = _parent_candidate(ctx, issue, parent, target)
             if pv and parent["direct"]:
                 approaches.append(("parent-upgrade %s %s -> %s" % (parent["name"], parent["version"], pv),
                                    footprint.parent_steps(issue["manager"], parent["name"], pv, issue["package"],
-                                                          target, manifest, cflags)))
-        if issue["manager"] == "npm":
+                                                          target, manifest, cflags), None))
+        if issue["manager"] in ("npm", "pnpm"):
             parents = sorted({e["name"] for e in _parents(entries, vulnerable_keys)})
-            approaches.append(("override", footprint.override_steps("npm", parents, issue["package"], target)))
+            steps, edit = footprint.override_steps(issue["manager"], parents, issue["package"], target)
+            approaches.append(("override", steps, edit))
     attempts = []
-    for label, steps in approaches:
-        fp = footprint.compute(ctx.repo, issue, steps)
+    for label, steps, edit in approaches:
+        fp = footprint.compute(ctx.repo, issue, steps, edit)
         if not fp["ok"]:
             attempts.append({"approach": label, "result": fp["error"]})
             continue
@@ -310,6 +319,8 @@ def plan_package(ctx, issue):
         p["approach"] = label.split(" ")[0]
         p["approach_detail"] = label
         p["steps"] = [s for s in steps]
+        if fp.get("edits"):
+            p["write_files"] = {rel: data.decode("utf-8") for rel, data in fp["edits"].items()}
         p["materialize"] = footprint.MATERIALIZE[footprint.tool_of(issue["manager"])]
         p["footprint"] = {
             "files": sorted(fp["files"]),
@@ -344,6 +355,8 @@ def _parent_candidate(ctx, issue, parent, target):
     """Smallest parent version (same major) whose declared range for the
     vulnerable package admits the target."""
     eco = issue["ecosystem"]
+    if privacy.is_private(parent["name"], ctx.private):
+        return None
     try:
         rels = registry.releases(eco, parent["name"])
     except net.NotFound:
@@ -586,7 +599,7 @@ def _write_bytes(path, data):
 
 
 def run(repo, scan_result, run_dir, fix_id=None, include_high=False, approvals=(), cooldown=7):
-    ctx = Ctx(repo, cooldown, approvals)
+    ctx = Ctx(repo, cooldown, approvals, scan_result.get("private_patterns") or [])
     issues = list(scan_result["critical"])
     if include_high or (fix_id and fix_id.startswith("H")):
         issues += scan_result["high"]
@@ -602,6 +615,7 @@ def run(repo, scan_result, run_dir, fix_id=None, include_high=False, approvals=(
         fx["approved"] = sorted(ctx.approvals)
         fx["planned_at"] = ctx.now.strftime("%Y-%m-%dT%H:%M:%SZ")
         fx["cooldown_days"] = cooldown
+        fx["private_patterns"] = ctx.private
         write_fix(run_dir, repo, fx, snap)
         fixes.append(fx)
     return {

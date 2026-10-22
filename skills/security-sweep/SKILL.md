@@ -28,7 +28,7 @@ Fix only the critical security issue, with the smallest possible change, one fix
 
 ## Setup
 
-`SWEEP` below means `python3 <skill-dir>/scripts/security_sweep.py`, where `<skill-dir>` is the directory containing this file. Python 3.9+ and network access are required. Use the same absolute project path as `--repo` every time. Output goes to `~/.security-sweep/`, never into the project.
+`SWEEP` below means `python3 <skill-dir>/scripts/security_sweep.py`, where `<skill-dir>` is the directory containing this file. Python 3.9+ and network access are required. Use the same absolute project path as `--repo` every time. Output goes to `~/.security-sweep/`, never into the project. If the user has private packages (for example `@acme/*`), pass `--private '@acme/*'` to `scan` (or use `.security-sweep.json`) so their names never reach public services.
 
 ## Workflow
 

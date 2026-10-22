@@ -100,18 +100,28 @@ def composer_flags():
     return flags
 
 
-def compute(repo, issue, steps):
+def compute(repo, issue, steps, edit=None):
     """Run `steps` (argv lists, including the program name) in a scratch copy.
 
-    Returns {"ok", "error", "files": {rel: (before, after)}, "before", "after"}
-    where before/after are parsed lockfile entry lists."""
+    `edit(inputs) -> {rel: bytes}` optionally rewrites config files (paths
+    relative to the lockfile's directory) before the steps run; the agent
+    makes the same edit by writing the exact content the plan shows.
+
+    Returns {"ok", "error", "files": {rel: (before, after)}, "before", "after",
+    "edits": {project-relative path: bytes}}."""
     manager = issue["manager"]
     tool = tool_of(manager)
     lockfile, manifest = issue["lockfile"], issue.get("manifest")
-    inputs = gather_inputs(repo, lockfile, manifest, manager)
+    original = gather_inputs(repo, lockfile, manifest, manager)
+    inputs = dict(original)
     lock_rel = os.path.basename(lockfile)
     man_rel = os.path.basename(manifest) if manifest else None
     outputs = [lock_rel] + ([man_rel] if man_rel else [])
+    edits = edit(dict(original)) if edit else {}
+    for rel, content in edits.items():
+        inputs[rel] = content
+        if rel not in outputs:
+            outputs.append(rel)
     for s in steps:
         if s[0] != tool:
             raise ValueError("step %r does not use %s" % (s, tool))
@@ -120,20 +130,22 @@ def compute(repo, issue, steps):
         msg = (res.stderr.strip() or res.stdout.strip())[-1500:]
         return {"ok": False, "error": "%s exited %s: %s" % (" ".join(steps[-1]), res.code, msg)}
     manifest_json = json.loads(res.files[man_rel].decode("utf-8")) if man_rel and res.files.get(man_rel) else None
-    old_manifest = json.loads(inputs[man_rel].decode("utf-8")) if man_rel and man_rel in inputs else None
+    old_manifest = json.loads(original[man_rel].decode("utf-8")) if man_rel and man_rel in original else None
     before = lockfiles.parse(manager, inputs[lock_rel], old_manifest)
     if res.files.get(lock_rel) is None:
         return {"ok": False, "error": "the command removed the lockfile"}
     after = lockfiles.parse(manager, res.files[lock_rel], manifest_json)
     base = os.path.dirname(lockfile)
+    prefix = base + "/" if base else ""
     files = {}
     for rel in outputs:
         new = res.files.get(rel)
-        old = inputs.get(rel)
+        old = original.get(rel)
         if new != old:
-            files[(base + "/" if base else "") + rel] = (old, new)
+            files[prefix + rel] = (old, new)
     return {"ok": True, "error": None, "files": files, "before": before, "after": after,
-            "diff": lockfiles.diff_entries(before, after)}
+            "diff": lockfiles.diff_entries(before, after),
+            "edits": {prefix + rel: res.files.get(rel) for rel in edits}}
 
 
 # ------------------------------------------------------------------ commands
@@ -235,17 +247,74 @@ def parent_steps(manager, parent, parent_version, name, version, manifest, cflag
 
 
 def override_steps(manager, parents, name, version):
-    """Scoped override: pin `name` only under the given parents (npm).
-    pnpm and Composer overrides are not supported in this version."""
-    if manager != "npm":
-        raise Unavailable("no scoped override is available for %s" % manager)
-    steps = []
-    for p in parents:
-        steps.append(["npm", "pkg", "set", "overrides[%s][%s]=%s" % (p, name, version)])
-    if not parents:
-        steps.append(["npm", "pkg", "set", "overrides[%s]=%s" % (name, version)])
-    steps.append(["npm", "install"] + NPM_FLAGS)
-    return steps
+    """Scoped override: pin `name` only under the given parents.
+
+    Returns (steps, edit) where edit is None or a function for compute().
+    npm uses `npm pkg set`. pnpm 10+ reads overrides only from
+    pnpm-workspace.yaml (older pnpm from package.json "pnpm.overrides"), and
+    no pnpm command can write a `parent>pkg` key, so it is a file edit.
+    Composer has no override mechanism."""
+    if manager == "npm":
+        steps = []
+        for p in parents:
+            steps.append(["npm", "pkg", "set", "overrides[%s][%s]=%s" % (p, name, version)])
+        if not parents:
+            steps.append(["npm", "pkg", "set", "overrides[%s]=%s" % (name, version)])
+        steps.append(["npm", "install"] + NPM_FLAGS)
+        return steps, None
+    if manager == "pnpm":
+        selectors = ["%s>%s" % (p, name) for p in parents] or [name]
+        if pnpm_major() >= 10:
+            edit = lambda inputs: {"pnpm-workspace.yaml": workspace_overrides(
+                inputs.get("pnpm-workspace.yaml"), selectors, version)}
+        else:
+            edit = lambda inputs: {"package.json": manifest_overrides(inputs.get("package.json"), selectors, version)}
+        return [["pnpm", "install"] + PNPM_FLAGS], edit
+    raise Unavailable("no scoped override is available for %s" % manager)
+
+
+def pnpm_major():
+    res = net.run_tool("pnpm", [["--version"]], {}, [], env=TOOL_ENV["pnpm"])
+    m = re.match(r"\s*(\d+)\.", res.stdout)
+    if not m:
+        raise net.SourceError("pnpm", "cannot read pnpm --version")
+    return int(m.group(1))
+
+
+def _yaml_quote(s):
+    return "'" + s.replace("'", "''") + "'"
+
+
+def workspace_overrides(existing, selectors, version):
+    """Add override lines to pnpm-workspace.yaml, keeping everything else
+    byte for byte. Existing entries for the same selector are replaced."""
+    text = existing.decode("utf-8") if existing else ""
+    lines = text.splitlines()
+    new = ["  %s: %s" % (_yaml_quote(sel), _yaml_quote(version)) for sel in selectors]
+    keys = {sel for sel in selectors}
+    idx = next((i for i, l in enumerate(lines) if re.match(r"^overrides:\s*$", l)), None)
+    if idx is None:
+        if lines and lines[-1].strip():
+            lines.append("")
+        lines += ["overrides:"] + new
+    else:
+        end = idx + 1
+        while end < len(lines) and (lines[end].startswith(" ") or not lines[end].strip()):
+            end += 1
+        block = [l for l in lines[idx + 1:end]
+                 if not any(l.strip().startswith((k + ":", _yaml_quote(k) + ":", '"%s":' % k)) for k in keys)]
+        while block and not block[-1].strip():
+            block.pop()
+        lines[idx + 1:end] = block + new
+    return ("\n".join(lines) + "\n").encode("utf-8")
+
+
+def manifest_overrides(existing, selectors, version):
+    data = json.loads(existing.decode("utf-8"))
+    ov = data.setdefault("pnpm", {}).setdefault("overrides", {})
+    for sel in selectors:
+        ov[sel] = version
+    return (json.dumps(data, indent=2) + "\n").encode("utf-8")
 
 
 def shell_join(argv):

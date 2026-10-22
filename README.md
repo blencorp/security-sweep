@@ -90,10 +90,10 @@ Runtimes follow the same rule: the smallest patch release in the current line, f
 
 ## Scope and limits
 
-| Supported | Not in v0.1 |
+| Supported | Not in v1 |
 | --- | --- |
 | npm (`package-lock.json`, `npm-shrinkwrap.json`, lockfile v1 to v3) | Yarn: scanned and planned, but the footprint can't be computed without installing, so Yarn fixes need explicit approval |
-| pnpm (`pnpm-lock.yaml` v5 to v9) | pnpm overrides (reported as blocked) |
+| pnpm (`pnpm-lock.yaml` v5 to v9), including scoped overrides | |
 | Composer (`composer.lock`, Composer 2.2+) | Composer has no override mechanism, so a blocked transitive fix is reported, not forced |
 | PHP and Node.js: Dockerfile `FROM` tags, `.php-version`, `.nvmrc`, `.node-version`, `config.platform.php`, pinned apt/apk packages | OS packages in base images other than PHP/Node; container image scanning |
 | | Flaws in your own code. For that, see Cloudflare's [security-audit skill](https://github.com/cloudflare/security-audit-skill). |
@@ -101,8 +101,8 @@ Runtimes follow the same rule: the smallest patch release in the current line, f
 Other things to know:
 - **Online only.** A registry, OSV, KEV, php.net or nodejs.org request that fails makes the result INCOMPLETE. It is never reported as clean.
 - **Unpinned runtimes are INCOMPLETE.** `FROM php:8.2-fpm`, `node:20` or an unpinned `apt-get install php` has no known exact version. The scan prints the minimum safe release and asks what production runs.
-- **Private registries.** Scoped or private packages that the public npm registry or Packagist can't answer for make that fix INCOMPLETE.
-- **What leaves your machine.** Package names and versions go to OSV.dev (through osv-scanner and direct queries), to the npm registry and Packagist, and to Docker Hub for image tags. There is no telemetry. `.npmrc` and `auth.json` are copied into the scratch directory so private registries keep working; their contents are never printed or logged.
+- **Private packages.** List them so their names never reach a public service: `--private '@acme/*'`, `SECURITY_SWEEP_PRIVATE=@acme/*,acme/*`, or a `.security-sweep.json` in the project root with `{"private": ["@acme/*", "acme/*"]}`. Matching packages are removed from the copy osv-scanner reads, and no registry or OSV request is made for them. If any can't be removed, that lockfile isn't scanned at all. They are reported as *not checked by public sources*. Private packages you don't list are looked up publicly, and a fix that public sources can't answer becomes INCOMPLETE.
+- **What leaves your machine.** Package names and versions (except private ones you list) go to OSV.dev (through osv-scanner and direct queries), to the npm registry and Packagist, and to Docker Hub for image tags. When `plan` computes a footprint, npm, pnpm and Composer contact the registries your project is configured for, as they normally would. There is no telemetry. `.npmrc` and `auth.json` are copied into the scratch directory so private registries keep working; their contents are never printed or logged.
 - **Where output goes.** `~/.security-sweep/<project>-<hash>/` (or `SECURITY_SWEEP_HOME`), never inside your project.
 
 ## Does it help? Agent check

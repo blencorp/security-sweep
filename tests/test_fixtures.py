@@ -190,6 +190,36 @@ class NpmDirectTest(FixtureTest):
         self.assertEqual(rep["fixes"][0]["status"], "applied_untested")
 
 
+class PrivatePackagesTest(FixtureTest):
+    """minimist stands in for a private package: nothing about it may reach
+    a public service, and the report must say it was not checked."""
+    fixture = "npm-direct"
+
+    def test_private_names_never_leave(self):
+        sent = []
+        real_request, real_tool = net.request, net.run_tool
+
+        def spy_request(url, method="GET", body=None, **kw):
+            sent.append(url + json.dumps(body or {}))
+            return real_request(url, method, body, **kw)
+
+        def spy_tool(name, steps, inputs, outputs, **kw):
+            sent.extend(v.decode("utf-8", "replace") for v in inputs.values())
+            return real_tool(name, steps, inputs, outputs, **kw)
+
+        with open(os.path.join(self.repo, ".security-sweep.json"), "w") as f:
+            json.dump({"private": ["minimist"]}, f)
+        with mock.patch.object(net, "request", spy_request), mock.patch.object(net, "run_tool", spy_tool):
+            code, s = self.scan()
+        self.assertEqual(s["critical"], [])
+        self.assertEqual(s["private_patterns"], ["minimist"])
+        self.assertEqual(s["lockfiles"][0]["private_excluded"], 1)
+        self.assertTrue(sent)
+        self.assertFalse([x for x in sent if "minimist" in x])
+        code, md = self.sweep("scan", self.repo)
+        self.assertIn("NOT CHECKED by public sources", md)
+
+
 class YoungFixTest(FixtureTest):
     """The only fix (minimist 1.2.6, published 2022-03-22) is 2 days old."""
     fixture = "npm-direct"
@@ -248,6 +278,62 @@ class PnpmTransitiveTest(FixtureTest):
         self.apply_expected("C1")
         code, res = self.sweep("check", "C1", "--repo", self.repo, "--json")
         self.assertEqual(res["status"], "awaiting_tests", res)
+
+
+class OverrideMixin(object):
+    """optimist 0.6.1 is the latest optimist and pins minimist ~0.0.1, so the
+    fix (minimist 0.2.4, a new 0.x line) needs approval and a scoped override."""
+
+    def plan_override(self):
+        code, s = self.scan()
+        i = s["critical"][0]
+        self.assertEqual((i["package"], i["version"], i["direct"]), ("minimist", "0.0.10", False))
+        code, p = self.plan()
+        fx = self.only_fix(p)
+        self.assertEqual(fx["status"], "needs_approval")
+        self.assertEqual(fx["approvals_needed"], ["major"])
+        code, p = self.plan("--fix", "C1", "--approve", "major")
+        fx = self.only_fix(p)
+        self.assertEqual(fx["status"], "ready", fx)
+        self.assertEqual(fx["approach"], "override")
+        self.assertEqual(fx["target"]["to"], "0.2.4")
+        self.assertEqual(fx["footprint"]["entries"], [{"name": "minimist", "from": "0.0.10", "to": "0.2.4"}])
+        self.assertIn({"approach": "refresh", "result": "did not reach a fixed version"}, fx["attempts"])
+        return fx
+
+    def test_check_passes_for_exact_change(self):
+        self.plan_override()
+        self.apply_expected("C1")
+        code, res = self.sweep("check", "C1", "--repo", self.repo, "--json")
+        self.assertEqual(res["status"], "awaiting_tests", res)
+
+
+class NpmOverrideTest(OverrideMixin, FixtureTest):
+    fixture = "npm-override"
+
+    def test_scoped_override(self):
+        fx = self.plan_override()
+        self.assertEqual(fx["steps"][0], ["npm", "pkg", "set", "overrides[optimist][minimist]=0.2.4"])
+        self.assertEqual(fx["footprint"]["files"], ["package-lock.json", "package.json"])
+
+
+class PnpmOverrideTest(OverrideMixin, FixtureTest):
+    fixture = "pnpm-override"
+
+    def test_scoped_override(self):
+        fx = self.plan_override()
+        self.assertEqual(fx["write_files"], {"pnpm-workspace.yaml": "overrides:\n  'optimist>minimist': '0.2.4'\n"})
+        self.assertEqual(fx["footprint"]["files"], ["pnpm-lock.yaml", "pnpm-workspace.yaml"])
+        with open(os.path.join(self.run_dir(), "fixes", "C1", "prompt.txt")) as f:
+            self.assertIn("----- begin pnpm-workspace.yaml -----", f.read())
+
+    def test_check_catches_different_override(self):
+        self.plan_override()
+        self.apply_expected("C1")
+        with open(os.path.join(self.repo, "pnpm-workspace.yaml"), "a") as f:
+            f.write("  'optimist>wordwrap': '1.0.0'\n")
+        code, res = self.sweep("check", "C1", "--repo", self.repo, "--json")
+        self.assertEqual(res["status"], "out_of_scope")
 
 
 class NpmMajorOnlyTest(FixtureTest):
@@ -414,11 +500,15 @@ class LiveCommandsMixin(object):
     """Run the prescribed commands in the real project and check the result
     matches the footprint computed in the scratch copy."""
     materialize_extra = []
+    plan_args = ()
 
     def test_prescribed_commands_stay_in_footprint(self):
         self.scan()
-        code, p = self.plan()
+        code, p = self.plan(*self.plan_args)
         fx = self.only_fix(p)
+        for rel, content in (fx.get("write_files") or {}).items():
+            with open(os.path.join(self.repo, rel), "w") as f:
+                f.write(content)
         for step in fx["steps"]:
             subprocess.run(step, cwd=self.repo, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         subprocess.run(fx["materialize"] + self.materialize_extra, cwd=self.repo, check=True,
@@ -443,6 +533,20 @@ class LiveNpmTransitive(LiveCommandsMixin, FixtureTest):
 class LivePnpmTransitive(LiveCommandsMixin, FixtureTest):
     fixture = "pnpm-transitive"
     materialize_extra = ["--ignore-scripts"]
+
+
+@unittest.skipUnless(helpers.live(), "live only: runs real package managers in the project")
+class LiveNpmOverride(LiveCommandsMixin, FixtureTest):
+    fixture = "npm-override"
+    materialize_extra = ["--ignore-scripts"]
+    plan_args = ("--fix", "C1", "--approve", "major")
+
+
+@unittest.skipUnless(helpers.live(), "live only: runs real package managers in the project")
+class LivePnpmOverride(LiveCommandsMixin, FixtureTest):
+    fixture = "pnpm-override"
+    materialize_extra = ["--ignore-scripts"]
+    plan_args = ("--fix", "C1", "--approve", "major")
 
 
 @unittest.skipUnless(helpers.live(), "live only: runs real package managers in the project")

@@ -34,6 +34,10 @@ def main(argv=None):
     s.add_argument("repo", nargs="?", default=".")
     s.add_argument("--cve", action="append", default=[], metavar="ID",
                    help="treat this CVE/GHSA id as critical (repeatable)")
+    s.add_argument("--private", action="append", default=[], metavar="PATTERN",
+                   help="private package name pattern, e.g. '@acme/*' or 'acme/*' (repeatable); matching packages "
+                        "are never sent to public services. Also read from .security-sweep.json and "
+                        "SECURITY_SWEEP_PRIVATE")
     s.add_argument("--out", help="run directory (default: ~/.security-sweep/<project>-<hash>)")
     s.add_argument("--json", action="store_true", help="print scan.json to stdout")
 

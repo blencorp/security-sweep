@@ -15,7 +15,7 @@ import json
 import os
 import shutil
 
-from . import footprint, lockfiles, net, osv, runtime, snapshot, state, tools
+from . import footprint, lockfiles, net, osv, privacy, runtime, snapshot, state, tools
 
 MANIFEST_NAMES = ("package.json", "composer.json")
 
@@ -136,6 +136,7 @@ def rescan(repo, fx):
         wanted.update(a.get("cves") or [])
     if fx["kind"] == "package":
         content = _read(os.path.join(repo, issue["lockfile"]))
+        content, _ = privacy.sanitize(issue["manager"], content, fx.get("private_patterns") or [])
         result = tools.osv_scan_lockfile(os.path.basename(issue["lockfile"]), content)
         left = []
         for res in result.get("results") or []:
@@ -208,7 +209,7 @@ def run_check(repo, run_dir, fix_id, tests=None):
         try:
             ok, left = rescan(repo, fx)
             out["rescan"] = {"ok": ok, "remaining": left}
-        except net.SourceError as e:
+        except (net.SourceError, privacy.LeakError) as e:
             out["rescan"] = {"ok": False, "error": str(e), "remaining": []}
         if not out["rescan"]["ok"]:
             out["status"] = "applied_unverified"

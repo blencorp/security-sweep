@@ -7,7 +7,7 @@ unless the user asks. Any data source that fails makes the result INCOMPLETE.
 
 import os
 
-from . import __version__, kev, lockfiles, net, osv, runtime, tools
+from . import __version__, kev, lockfiles, net, osv, privacy, runtime, tools
 
 ECOSYSTEM = {"npm": "npm", "yarn-classic": "npm", "yarn-berry": "npm", "pnpm": "npm", "composer": "Packagist"}
 
@@ -38,8 +38,8 @@ def _advisory(vuln, score_hint, named, workaround=True):
     }
 
 
-def scan_lockfile(repo, lk, named):
-    """Return (issues, error or None) for one lockfile."""
+def scan_lockfile(repo, lk, named, private=()):
+    """Return the issues found in one lockfile."""
     path = os.path.join(repo, lk["path"])
     with open(path, "rb") as f:
         content = f.read()
@@ -51,7 +51,8 @@ def scan_lockfile(repo, lk, named):
             manifest = None
     entries = lockfiles.parse(lk["manager"], content, manifest)
     lk["entries"] = len(entries)
-    result = tools.osv_scan_lockfile(os.path.basename(lk["path"]), content)
+    public, lk["private_excluded"] = privacy.sanitize(lk["manager"], content, private)
+    result = tools.osv_scan_lockfile(os.path.basename(lk["path"]), public)
     eco = ECOSYSTEM[lk["manager"]]
     issues = []
     for res in result.get("results") or []:
@@ -147,9 +148,10 @@ def runtime_issue(rt, named):
     return issue
 
 
-def run(repo, named_cves=()):
+def run(repo, named_cves=(), private=()):
     repo = os.path.realpath(repo)
     named = set(named_cves)
+    private = privacy.load_patterns(repo, private)
     reasons = []
     files = list(lockfiles.walk(repo))
     locks, not_checked = lockfiles.discover(repo)
@@ -161,14 +163,15 @@ def run(repo, named_cves=()):
     for lk in locks:
         summary = {"path": lk["path"], "manager": lk["manager"], "manifest": lk["manifest"], "status": "checked"}
         try:
-            for issue in scan_lockfile(repo, lk, named):
+            for issue in scan_lockfile(repo, lk, named, private):
                 tier, kept = _split(issue)
                 if tier == "critical":
                     critical.append(kept)
                 elif tier == "high":
                     high.append(kept)
             summary["entries"] = lk.get("entries")
-        except (net.SourceError, lockfiles.LockfileError) as e:
+            summary["private_excluded"] = lk.get("private_excluded", 0)
+        except (net.SourceError, lockfiles.LockfileError, privacy.LeakError) as e:
             summary["status"] = "failed"
             summary["error"] = str(e)
             reasons.append("%s: %s" % (lk["path"], e))
@@ -219,6 +222,7 @@ def run(repo, named_cves=()):
         "status": "INCOMPLETE" if reasons else "COMPLETE",
         "incomplete_reasons": reasons,
         "named_cves": sorted(named),
+        "private_patterns": private,
         "lockfiles": lock_summaries,
         "not_checked": not_checked,
         "runtimes": runtimes,

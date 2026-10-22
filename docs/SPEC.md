@@ -2,7 +2,7 @@
 
 Oct 22, 2026. Supersedes earlier versions.
 
-> Implementation notes (where v0.1 differs from or extends this spec) are at the end.
+> Implementation notes (where v1 differs from or extends this spec) are at the end.
 
 ## Purpose
 
@@ -112,7 +112,7 @@ blencorp/security-sweep/
 
 ---
 
-## Implementation notes (v0.1)
+## Implementation notes (v1)
 
 - **Layout.** The skill lives in `skills/security-sweep/` (the layout `npx skills add` discovers), so installing it copies only `SKILL.md`, `references/`, `scripts/` and `tools.lock.json`, not the tests and recordings. The command is `python3 <skill-dir>/scripts/security_sweep.py`.
 - **Same commands, byte for byte.** The footprint commands are lockfile-only (`--package-lock-only`, `--lockfile-only`, `--no-install`). The agent runs those same commands, then one install step that cannot change the lockfile (`npm ci`, `pnpm install --frozen-lockfile`, `composer install`).
@@ -121,6 +121,8 @@ blencorp/security-sweep/
 - **Sequential fixes.** The agent runs `plan --fix ID` right before each fix. `check` and `revert` refuse a plan made before another fix was kept.
 - **Approvals** are recorded with `plan --fix ID --approve major|cooldown|footprint`. `check` fails a fix that needed approval and was applied without it.
 - **revert** and **report** commands were added so keep-or-revert and the final report are deterministic.
-- **Yarn.** Yarn classic cannot update its lockfile without installing, and Yarn Berry would run the project's vendored Yarn. Yarn fixes are planned, but their footprint is not computed in advance; they need approval, and `check` then allows changes only for the target package. pnpm overrides are not supported yet.
+- **Yarn.** Yarn classic cannot update its lockfile without installing, and Yarn Berry would run the project's vendored Yarn. Yarn fixes are planned, but their footprint is not computed in advance; they need approval, and `check` then allows changes only for the target package.
 - **Tests** replay recorded responses with an injectable clock (deterministic, offline). A daily live job runs the same tests against live data and runs the real package-manager commands in project copies.
 - **Debian fixture.** Debian's php8.2 in bookworm has no true version-preserving backport for a critical CVE, so the fixture uses `8.2.18-1~deb12u1`. Upstream PHP 8.2.18 is affected by CVE-2024-4577 (KEV), but Debian marks the package not affected, and it must not be flagged.
+- **pnpm overrides** are a byte-exact edit of `pnpm-workspace.yaml` (pnpm 10+ reads overrides only from there, and no pnpm command can write a `parent>pkg` key) or of `package.json` `pnpm.overrides` (older pnpm).
+- **Private packages** (from v2 of the spec): `--private`, `SECURITY_SWEEP_PRIVATE` or `.security-sweep.json` list name patterns. Matching packages are stripped from the copy osv-scanner reads, the strip fails closed, and no registry or OSV request is made for them.
