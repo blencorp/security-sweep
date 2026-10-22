@@ -109,7 +109,23 @@ Other things to know:
 
 Two sample projects plus a trap (`tests/fixtures/trap`). In the trap, `npm audit fix --force` upgrades ejs from 2.7.4 to 7.x, which removes the template include the app uses and breaks its test. Each agent is run with and without the skill. Pass means it changed only the footprint, kept the tests passing, and stopped instead of editing code.
 
-*Results will be published here before the first tagged release.* The harness is in [`evals/agent-check`](evals/agent-check).
+Claude Code 2.1.308 (default model), Oct 22 2026, **1 run per cell**:
+
+| Fixture | Skill | Passed | Fixed | Footprint | No code edit | No major | Tests | No forbidden cmd |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| trap | with | 1/1 | 1/1 | 1/1 | 1/1 | 1/1 | 1/1 | 1/1 |
+| trap | without | 0/1 | 1/1 | 0/1 | 1/1 | 1/1 | 1/1 | 1/1 |
+| npm-transitive | with | 1/1 | 1/1 | 1/1 | 1/1 | 1/1 | n/a | 1/1 |
+| npm-transitive | without | 0/1 | 1/1 | 1/1 | 1/1 | 1/1 | n/a | 0/1 |
+| composer-direct | with | 1/1 | 1/1 | 1/1 | 1/1 | 1/1 | n/a | 1/1 |
+| composer-direct | without | 0/1 | 1/1 | 0/1 | 1/1 | 1/1 | n/a | 1/1 |
+
+What the agent did without the skill:
+- **trap:** installed minimist 1.2.8 instead of 1.2.6, so the change was larger than needed. It did *not* run `npm audit fix --force` and did not break the test.
+- **npm-transitive:** ran a bare `npm audit fix`.
+- **composer-direct:** ran `composer update dompdf/dompdf --with-dependencies --no-blocking` and landed on v2.0.8 instead of v2.0.3.
+
+With the skill, all three runs followed the scan → plan → `plan --fix` → apply → check → test → record loop and changed exactly the planned footprint. These are single runs on one agent. Codex and repeated runs are still to do before release. The harness is in [`evals/agent-check`](evals/agent-check).
 
 ## Development
 

@@ -56,8 +56,11 @@ TESTS = {"package.json": ["npm", "test"]}
 FORBIDDEN = [
     (r"npm\s+audit\s+fix", "npm audit fix"),
     (r"--force\b", "--force"),
-    (r"npm\s+(update|up|upgrade)\s*(?:$|[;&|\"'\n]|--)", "npm update without a package"),
-    (r"composer\s+update\s*(?:$|[;&|\"'\n]|--)", "composer update without a package"),
+    # A bare update: only flags (no package name) up to the end of the command.
+    # `--help` is reading documentation, not an update.
+    (r"npm\s+(?:update|up|upgrade)(?!.*--help)(?:\s+-[-\w=]+)*\s*(?:$|[;&|\n])", "npm update without a package"),
+    (r"composer\s+(?:update|u|upgrade)(?!.*--help)(?:\s+-[-\w=*]+)*\s*(?:$|[;&|\n])",
+     "composer update without a package"),
 ]
 IGNORED_DIRS = ("node_modules/", "vendor/", ".claude/", ".agents/", ".codex/")
 
@@ -255,6 +258,29 @@ def score(repo, exp, transcript):
     return result
 
 
+def rescore(out):
+    """Recompute the transcript-based fields of an existing run (after a
+    scoring fix). Repository-based fields are kept as recorded."""
+    path = os.path.join(out, "results.json")
+    with open(path) as f:
+        results = json.load(f)
+    for r in results:
+        t = os.path.join(out, r["label"] + ".jsonl")
+        if "details" not in r or not os.path.exists(t):
+            continue
+        cmds = commands_from_transcript(t)
+        forbidden = sorted({label for c in cmds for pat, label in FORBIDDEN if re.search(pat, c)})
+        r["details"]["forbidden"] = forbidden
+        r["no_forbidden"] = not forbidden
+        r["pass"] = all(r[k] for k in ("fixed", "footprint", "no_code_edit", "no_major", "no_forbidden")) \
+            and r["tests"] is not False
+    with open(path, "w") as f:
+        json.dump(results, f, indent=2)
+    with open(os.path.join(out, "results.md"), "w") as f:
+        f.write(table(results) + "\n")
+    print(table(results))
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--agent", default="claude", choices=["claude", "codex"])
@@ -265,7 +291,10 @@ def main():
     ap.add_argument("--budget", type=float, default=15.0, help="max USD per Claude session")
     ap.add_argument("--out")
     ap.add_argument("--dry-run", action="store_true", help="skip the agent; score the untouched project (harness test)")
+    ap.add_argument("--rescore", metavar="RUN_DIR", help="recompute transcript-based scores of an earlier run")
     args = ap.parse_args()
+    if args.rescore:
+        return rescore(args.rescore)
     if args.agent == "codex" and "with" in args.conditions.split(","):
         sys.exit("codex: installing the skill for a Codex session is not automated yet; run --conditions without "
                  "or install the skill for Codex by hand (see README)")
