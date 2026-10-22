@@ -13,6 +13,7 @@ rescan and tests all passed.
 
 import json
 import os
+import re
 import shutil
 
 from . import footprint, lockfiles, net, osv, privacy, runtime, snapshot, state, tools
@@ -42,6 +43,19 @@ def _json_diff(a, b, path=""):
             out.extend(_json_diff(a.get(k), b.get(k), "%s.%s" % (path, k) if path else k))
         return out
     return [] if a == b else [path or "(root)"]
+
+
+def _names_package(path, name):
+    """Does a dotted manifest path ('dependencies.lodash', 'resolutions.**/lodash')
+    name exactly this package? 'dependencies.@other/lodash' or
+    'dependencies.lodash.merge' do not name 'lodash'."""
+    section, _, rest = path.partition(".")
+    if rest == name:
+        return True
+    if section == "resolutions" and rest.endswith("/" + name):
+        parent = rest[:-len(name) - 1]
+        return not re.match(r"^@[^/]+$", parent)  # '@scope/name' is another package
+    return False
 
 
 def _lockfile_problems(fx, rel, before_bytes, now_bytes, manifest_now):
@@ -110,7 +124,7 @@ def scope(repo, fix_dir, fx):
             except ValueError as e:
                 diffs = ["(invalid JSON: %s)" % e]
             for k in diffs:
-                if not any(k == n or k.endswith("." + n) or k.endswith("/" + n) for n in names):
+                if not any(_names_package(k, n) for n in names):
                     inside.append({"path": rel, "item": k, "problem": "changed outside the target package"})
         elif base in MANIFEST_NAMES and expected is not None:
             try:
@@ -171,6 +185,11 @@ def _record(run_dir, fix_id, entry):
     path = _results_path(run_dir)
     data = state.read_json(path) if os.path.exists(path) else {}
     entry["seq"] = state.next_seq(run_dir)
+    prev = data.get(fix_id) or {}
+    if entry.get("status") in KEPT and prev.get("status") in KEPT:
+        # Re-checking a kept fix (e.g. to record the test result) does not
+        # change the project, so it must not make later plans look stale.
+        entry["kept_seq"] = prev.get("kept_seq", prev.get("seq", 0))
     data[fix_id] = entry
     state.write_json(path, data)
 
@@ -181,7 +200,8 @@ def _stale_because(run_dir, fix_dir, fix_id):
     seq = state.read_json(os.path.join(fix_dir, "snapshot.json")).get("seq", 0)
     path = _results_path(run_dir)
     data = state.read_json(path) if os.path.exists(path) else {}
-    return sorted(k for k, v in data.items() if k != fix_id and v.get("status") in KEPT and v.get("seq", 0) > seq)
+    return sorted(k for k, v in data.items() if k != fix_id and v.get("status") in KEPT
+                  and v.get("kept_seq", v.get("seq", 0)) > seq)
 
 
 def run_check(repo, run_dir, fix_id, tests=None):

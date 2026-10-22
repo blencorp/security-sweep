@@ -15,7 +15,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - Scoped overrides as the last resort for npm and pnpm transitive fixes.
 - Private package patterns (`--private`, `SECURITY_SWEEP_PRIVATE`, `.security-sweep.json`): never sent to public services.
 - osv-scanner v2.7.0 pinned by SHA-256 per platform.
-- Offline replay test suite with 13 sample projects, including a trap where `npm audit fix --force` breaks the app.
+- Offline replay test suite with 14 sample projects, including a trap where `npm audit fix --force` breaks the app.
 
 [Unreleased]: https://github.com/blencorp/security-sweep/compare/v1.0.0...HEAD
 [1.0.0]: https://github.com/blencorp/security-sweep/releases/tag/v1.0.0

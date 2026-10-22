@@ -191,7 +191,7 @@ def run(repo, named_cves=(), private=()):
             reasons.append("%s:%s %s" % (rt["source"], rt["line"], rt["problem"]))
             crit = [a for a in issue["advisories"] if a["tier"] == "critical"]
             fixes = [a["fixed_in"] for a in crit if a.get("fixed_in")]
-            rt["minimum_safe"] = _max_version(rt["runtime"], rt.get("origin"), fixes) if fixes else None
+            rt["minimum_safe"] = _max_version(rt, fixes) if fixes else None
         else:
             tier, kept = _split(issue)
             if rt.get("eol") and tier != "critical":
@@ -231,13 +231,15 @@ def run(repo, named_cves=(), private=()):
     }
 
 
-def _max_version(rt, origin, vs):
+def _max_version(rt, vs):
     from . import versions
-    if origin == "distro":
+    if rt.get("origin") == "distro":
+        debian = rt["distro"]["ecosystem"].split(":")[0] in ("Debian", "Ubuntu")
+        cmp_ = versions.dpkg_compare if debian else versions.apk_compare
         best = vs[0]
         for v in vs[1:]:
-            if versions.dpkg_compare(v, best) > 0:
+            if cmp_(v, best) > 0:
                 best = v
         return best
-    key = versions.semver_key if rt == "node" else versions.composer_key
+    key = versions.semver_key if rt["runtime"] == "node" else versions.composer_key
     return max(vs, key=key)

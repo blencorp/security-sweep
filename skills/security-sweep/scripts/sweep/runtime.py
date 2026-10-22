@@ -72,7 +72,10 @@ def _platform_config(path, rel):
         return []
     with open(path, encoding="utf-8") as f:
         lines = f.read().splitlines()
-    line_no = next((i for i, l in enumerate(lines, 1) if '"php"' in l and php in l), 0)
+    # The "php" key inside config.platform, not require.php (which comes first
+    # in most files and may contain the same version string).
+    start = next((i for i, l in enumerate(lines) if '"platform"' in l), 0)
+    line_no = next((i for i, l in enumerate(lines[start:], start + 1) if '"php"' in l and php in l), 0)
     return [_decl("php", rel, line_no, lines[line_no - 1] if line_no else "", str(php), "platform-config")]
 
 

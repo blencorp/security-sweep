@@ -14,7 +14,7 @@ import json
 import os
 import re
 
-from . import lockfiles, net
+from . import lockfiles, miniyaml, net
 
 CONFIG_FILES = {
     "npm": [".npmrc"],
@@ -67,6 +67,17 @@ def gather_inputs(repo, lockfile, manifest, manager):
             for key in (data.get("packages") or {}):
                 if key and "node_modules/" not in key:
                     rels.append(key + "/package.json")
+        except (ValueError, OSError):
+            pass
+    if manager == "pnpm":
+        # Likewise every workspace member pnpm-lock.yaml has an importer for;
+        # without them pnpm would drop their sections from the lockfile.
+        try:
+            with open(os.path.join(repo, lockfile), encoding="utf-8") as f:
+                importers = miniyaml.loads(f.read()).get("importers") or {}
+            for key in importers:
+                if key not in (".", ""):
+                    rels.append(key.rstrip("/") + "/package.json")
         except (ValueError, OSError):
             pass
     out = {}
@@ -310,11 +321,15 @@ def workspace_overrides(existing, selectors, version):
 
 
 def manifest_overrides(existing, selectors, version):
-    data = json.loads(existing.decode("utf-8"))
+    text = existing.decode("utf-8")
+    data = json.loads(text)
     ov = data.setdefault("pnpm", {}).setdefault("overrides", {})
     for sel in selectors:
         ov[sel] = version
-    return (json.dumps(data, indent=2) + "\n").encode("utf-8")
+    # Keep the file's indentation and non-ASCII text so only the override changes.
+    m = re.match(r"\{\s*?\n([ \t]+)\S", text)
+    indent = m.group(1) if m else 2
+    return (json.dumps(data, indent=indent, ensure_ascii=False) + "\n").encode("utf-8")
 
 
 def shell_join(argv):

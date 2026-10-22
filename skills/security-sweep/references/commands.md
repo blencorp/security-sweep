@@ -12,7 +12,7 @@
 | Last resort | Scoped override: `npm pkg set 'overrides[<parent>][<pkg>]=<ver>'`, then `npm install --package-lock-only ...` | Scoped override `'<parent>><pkg>': '<ver>'` written into `pnpm-workspace.yaml` (pnpm 10+) or `package.json` `pnpm.overrides` (older), then `pnpm install --lockfile-only ...` | Composer has no override: reported as blocked |
 | Install step afterwards | `npm ci` | `pnpm install --frozen-lockfile` | `composer install` |
 
-Save flags keep the project's style: an exact pin stays exact (`--save-exact`), `~` stays `~` (`--save-prefix=~`), anything else gets `^` (`--save-prefix=^`). `--save-dev` / `--save-optional` keep the dependency in its section.
+npm save flags keep the project's style: an exact pin stays exact (`--save-exact`), `~` stays `~` (`--save-prefix=~`), anything else gets `^` (`--save-prefix=^`). `--save-dev` / `--save-optional` keep the dependency in its section. pnpm decides the saved range itself. pnpm 10 keeps an existing `~` or `^`, and pnpm 12 saves the exact version. Neither widens the range, and the footprint shows the exact `package.json` change before you apply it.
 
 `npm update <pkg>` (and `pnpm update <pkg>`) resolves to the newest version inside the existing ranges, which may be above the minimum fix. The plan reports the version that actually lands, and runs the safety checks on it and on every other entry the change adds or moves.
 
@@ -33,7 +33,13 @@ Some fixes (pnpm overrides) include a step like *Replace the whole content of pn
 
 ## Yarn
 
-Yarn classic (v1) cannot update `yarn.lock` without installing, and Yarn Berry would run the project's own vendored Yarn release. Neither is run in advance. Yarn fixes get a version from `plan`, are marked *needs your approval: footprint cannot be computed in advance*, and come with suggested commands. With the user's approval (`plan --fix ID --approve footprint`), `check` allows lockfile and `package.json` changes only for the target package.
+Yarn classic (v1) cannot update `yarn.lock` without installing, and Yarn Berry would run the project's own vendored Yarn release. Neither is run in advance. Yarn fixes get a version from `plan`, are marked *needs your approval: footprint cannot be computed in advance*, and come with steps:
+
+- Yarn 1, direct dependency: `yarn add <pkg>@<ver>` with `--exact` / `--tilde` / `--dev` to keep the style and section.
+- Yarn 1, transitive dependency: `yarn upgrade <pkg>` does nothing for a transitive package. The prompt instead gives `yarn.lock` with the vulnerable entry removed, then `yarn install --ignore-scripts`, which re-resolves it inside the parent's range.
+- Yarn Berry: `yarn up <pkg>@npm:<ver> --mode=update-lockfile` (direct) or `yarn up -R <pkg> --mode=update-lockfile` (transitive).
+
+ With the user's approval (`plan --fix ID --approve footprint`), `check` allows lockfile and `package.json` changes only for the target package.
 
 ## What `check` compares
 

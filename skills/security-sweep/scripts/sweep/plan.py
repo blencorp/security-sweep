@@ -196,13 +196,25 @@ def _affected_entries(entries, issue, advisories):
             and any(osv.affects(a, issue["ecosystem"], e["name"], e["version"]) for a in advisories)]
 
 
+def _at_issue_version(entry, issue):
+    """The entry is the installed version this issue is about. Other installed
+    versions of the same package are separate issues with their own fixes."""
+    a, b = entry["version"], issue["version"]
+    return a == b or (issue["ecosystem"] == "Packagist" and versions.composer_key(a) == versions.composer_key(b))
+
+
 def _parents(entries, vulnerable_keys):
     return [e for e in entries if any(k in vulnerable_keys for k in e["deps"].values())]
 
 
-def _reaches_fix(diff_after, issue, advisories):
-    left = _affected_entries(diff_after, issue, advisories)
-    return not left
+def _reaches_fix(before, after, issue, advisories):
+    """No affected entry is left, apart from other installed versions of the
+    package that this fix leaves untouched (they are separate issues)."""
+    from collections import Counter
+    others = Counter((e["name"], e["version"]) for e in _affected_entries(before, issue, advisories)
+                     if not _at_issue_version(e, issue))
+    left = Counter((e["name"], e["version"]) for e in _affected_entries(after, issue, advisories))
+    return not (left - others)
 
 
 def _footprint_safety(ctx, issue, fp, advisories):
@@ -234,10 +246,10 @@ def plan_package(ctx, issue):
     p = {"id": issue["id"], "kind": "package", "issue": _issue_summary(issue)}
     advisories = [osv.get_vuln(a["id"]) for a in issue["advisories"]]
     entries, manifest = _current_entries(ctx, issue)
-    vulnerable = _affected_entries(entries, issue, advisories)
+    vulnerable = [e for e in _affected_entries(entries, issue, advisories) if _at_issue_version(e, issue)]
     if not vulnerable:
-        p.update(status=STATUS_RESOLVED, detail="no installed %s version in %s is affected any more"
-                 % (issue["package"], issue["lockfile"]))
+        p.update(status=STATUS_RESOLVED, detail="%s %s in %s is no longer installed or no longer affected"
+                 % (issue["package"], issue["version"], issue["lockfile"]))
         return p
     installed = issue["version"]
     target, status, need, skipped, chosen_safety = choose_version(ctx, issue, advisories)
@@ -261,7 +273,10 @@ def plan_package(ctx, issue):
         p.update(status=STATUS_APPROVAL if need else STATUS_READY, approvals_needed=need,
                  detail=str(e), approach="manual",
                  footprint={"files": sorted(files), "entries": None, "names_only": [issue["package"]]},
-                 steps=_manual_steps(issue, target))
+                 steps=_manual_steps(issue, target, manifest))
+        writes = _manual_writes(ctx, issue)
+        if writes:
+            p["write_files"] = writes
         p["_before"] = {}
         for rel in files:
             with open(os.path.join(ctx.repo, rel), "rb") as f:
@@ -295,7 +310,7 @@ def plan_package(ctx, issue):
         if not fp["ok"]:
             attempts.append({"approach": label, "result": fp["error"]})
             continue
-        if not _reaches_fix(fp["after"], issue, advisories):
+        if not _reaches_fix(fp["before"], fp["after"], issue, advisories):
             attempts.append({"approach": label, "result": "did not reach a fixed version"})
             continue
         checks = _footprint_safety(ctx, issue, fp, advisories)
@@ -395,17 +410,60 @@ def _major_changes(issue, fp, label):
     return False
 
 
-def _manual_steps(issue, target):
+def _manual_steps(issue, target, manifest=None):
     name = issue["package"]
     if issue["manager"] == "yarn-classic":
         if issue["direct"]:
-            return [["yarn", "upgrade", "%s@%s" % (name, target), "--exact", "--ignore-scripts"]]
+            sec, spec = footprint.manifest_section(manifest, name, "npm")
+            flags = ["--exact"] if spec and re.match(r"^\d", spec) else ["--tilde"] if (spec or "").startswith("~") else []
+            if sec == "devDependencies":
+                flags.append("--dev")
+            elif sec == "optionalDependencies":
+                flags.append("--optional")
+            return [["yarn", "add", "%s@%s" % (name, target)] + flags + ["--ignore-scripts"]]
+        # `yarn upgrade <pkg>` does nothing for a transitive dependency in
+        # Yarn 1; dropping its lockfile entry makes `yarn install` re-resolve
+        # it inside the parent's range (see _manual_writes).
         return [["yarn", "install", "--ignore-scripts"]]
     if issue["manager"] == "yarn-berry":
         if issue["direct"]:
             return [["yarn", "up", "%s@npm:%s" % (name, target), "--mode=update-lockfile"]]
         return [["yarn", "up", "-R", name, "--mode=update-lockfile"]]
     return []
+
+
+def _manual_writes(ctx, issue):
+    """Yarn 1 transitive fix: yarn.lock without the vulnerable entry."""
+    if issue["manager"] != "yarn-classic" or issue["direct"]:
+        return None
+    with open(os.path.join(ctx.repo, issue["lockfile"]), encoding="utf-8") as f:
+        text = f.read()
+    out, block, drop = [], [], False
+
+    def flush():
+        if block and not drop:
+            out.extend(block)
+
+    for line in text.splitlines(True):
+        if line.strip() and not line.startswith((" ", "#")):
+            flush()
+            block, drop = [line], False
+            specs = [s.strip().strip('"') for s in line.rstrip().rstrip(":").split(",")]
+            names = {lockfiles._spec_name(s)[0] for s in specs}
+        elif block:
+            block.append(line)
+            m = re.match(r'^  version "?([^"\s]+)"?', line)
+            if m and issue["package"] in names and m.group(1) == issue["version"]:
+                drop = True
+        else:
+            out.append(line)
+    flush()
+    new = "".join(out)
+    if new == text:
+        return None
+    # Collapse the blank line left behind by a removed block.
+    new = re.sub(r"\n{3,}", "\n\n", new)
+    return {issue["lockfile"]: new}
 
 
 def _no_fix_text(issue, skipped):
@@ -500,30 +558,35 @@ def _line_edit(ctx, issue, p, new_version, approvals):
         before = f.read()
     lines = before.decode("utf-8").splitlines(True)
     idx = issue["line"] - 1
+    changed = []
     if issue["origin"] == "distro":
-        # A RUN instruction can span several lines; edit the one with the pin.
+        # A RUN instruction can span several lines, and several packages of
+        # the same source (php8.2-cli, php8.2-fpm) may be pinned to the same
+        # version: move every pin together or apt cannot install them.
         for j in range(idx, min(issue.get("end_line", issue["line"]), len(lines))):
-            if "=" + issue["version"] in lines[j]:
-                idx = j
-                break
-    old_line = lines[idx]
-    if issue["origin"] == "official-image":
-        new_line = old_line.replace(":" + issue["tag"], ":" + runtime.retag(issue["tag"], new_version), 1)
-    elif issue["origin"] == "distro":
-        new_line = old_line.replace("=" + issue["version"], "=" + new_version)
-    elif issue["origin"] == "platform-config":
-        new_line = old_line.replace('"%s"' % issue["version"], '"%s"' % new_version, 1)
+            new = lines[j].replace("=" + issue["version"], "=" + new_version)
+            if new != lines[j]:
+                changed.append((j, lines[j], new))
     else:
-        new_line = old_line.replace(issue["version"], new_version, 1)
-    if new_line == old_line:
+        old_line = lines[idx]
+        if issue["origin"] == "official-image":
+            new_line = old_line.replace(":" + issue["tag"], ":" + runtime.retag(issue["tag"], new_version), 1)
+        elif issue["origin"] == "platform-config":
+            new_line = old_line.replace('"%s"' % issue["version"], '"%s"' % new_version, 1)
+        else:
+            new_line = old_line.replace(issue["version"], new_version, 1)
+        if new_line != old_line:
+            changed.append((idx, old_line, new_line))
+    if not changed:
         p.update(status=STATUS_ERROR, detail="could not locate the version on %s line %d"
                  % (issue["source"], idx + 1))
         return p
-    lines[idx] = new_line
+    for j, _, new in changed:
+        lines[j] = new
     after = "".join(lines).encode("utf-8")
     p["approach"] = "edit-line"
-    p["edit"] = {"file": issue["source"], "line": idx + 1,
-                 "from": old_line.rstrip("\r\n"), "to": new_line.rstrip("\r\n")}
+    edits = [{"line": j + 1, "from": old.rstrip("\r\n"), "to": new.rstrip("\r\n")} for j, old, new in changed]
+    p["edit"] = dict(edits[0], file=issue["source"], lines=edits)
     p["footprint"] = {"files": [issue["source"]], "entries": [], "added": [], "removed": []}
     p["_expected"] = {issue["source"]: after}
     p["_before"] = {issue["source"]: before}

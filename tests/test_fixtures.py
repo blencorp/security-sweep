@@ -396,8 +396,10 @@ class PhpImageTest(FixtureTest):
         self.assertEqual(fx["status"], "ready")
         if not helpers.live():
             self.assertEqual(fx["target"]["to"], "8.2.26")
-            self.assertEqual(fx["edit"], {"file": "Dockerfile", "line": 1, "from": "FROM php:8.2.25-cli",
-                                          "to": "FROM php:8.2.26-cli"})
+            self.assertEqual({k: fx["edit"][k] for k in ("file", "line", "from", "to")},
+                             {"file": "Dockerfile", "line": 1, "from": "FROM php:8.2.25-cli",
+                              "to": "FROM php:8.2.26-cli"})
+            self.assertEqual(len(fx["edit"]["lines"]), 1)
         self.assertEqual(fx["footprint"]["files"], ["Dockerfile"])
 
     def test_check_runtime_edit(self):
@@ -496,6 +498,18 @@ class YarnClassicTest(FixtureTest):
         self.assertIn("ms 2.1.3", [x["item"] for x in res["scope"]["inside"]])
 
 
+class YarnTransitiveTest(FixtureTest):
+    fixture = "yarn-transitive"
+
+    def test_plan_drops_lock_entry_and_reinstalls(self):
+        self.scan()
+        code, p = self.plan("--fix", "C1", "--approve", "footprint")
+        fx = self.only_fix(p)
+        self.assertEqual(fx["status"], "ready")
+        self.assertEqual(fx["steps"], [["yarn", "install", "--ignore-scripts"]])
+        self.assertNotIn("minimist@^1.2.5:", fx["write_files"]["yarn.lock"])
+
+
 class LiveCommandsMixin(object):
     """Run the prescribed commands in the real project and check the result
     matches the footprint computed in the scratch copy."""
@@ -547,6 +561,24 @@ class LivePnpmOverride(LiveCommandsMixin, FixtureTest):
     fixture = "pnpm-override"
     materialize_extra = ["--ignore-scripts"]
     plan_args = ("--fix", "C1", "--approve", "major")
+
+
+@unittest.skipUnless(helpers.live(), "live only: runs real package managers in the project")
+class LiveYarnTransitive(LiveCommandsMixin, FixtureTest):
+    fixture = "yarn-transitive"
+    plan_args = ("--fix", "C1", "--approve", "footprint")
+
+    def test_prescribed_commands_stay_in_footprint(self):
+        self.scan()
+        code, p = self.plan(*self.plan_args)
+        fx = self.only_fix(p)
+        for rel, content in fx["write_files"].items():
+            with open(os.path.join(self.repo, rel), "w") as f:
+                f.write(content)
+        for step in fx["steps"]:
+            subprocess.run(step, cwd=self.repo, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        code, res = self.sweep("check", "C1", "--repo", self.repo, "--json")
+        self.assertEqual(res["status"], "awaiting_tests", res)
 
 
 @unittest.skipUnless(helpers.live(), "live only: runs real package managers in the project")

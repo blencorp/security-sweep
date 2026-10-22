@@ -373,10 +373,18 @@ def _mark_roots(entries, by_spec, prod, dev, spec_of):
 
 # -------------------------------------------------------------------- pnpm
 
+# v5: '/name/1.2.3', '/@scope/name/1.2.3', with an optional '_peer@1+other@2'
+# suffix that itself contains '@'.
+_PNPM_V5_KEY = re.compile(r"^/?((?:@[^/@]+/)?[^/@]+)/(\d[^/_(]*)(?:_.*)?$")
+
+
 def _pnpm_key(key):
-    """'/@scope/name@1.2.3(peer@1)' or 'name@1.2.3' or '/name/1.2.3' -> (name, version)."""
-    k = key.lstrip("/")
-    k = re.sub(r"\(.*\)$", "", k)
+    """'/@scope/name@1.2.3(peer@1)' or 'name@1.2.3' or '/name/1.2.3_peer@1' -> (name, version)."""
+    k = re.sub(r"\(.*\)$", "", key)
+    m = _PNPM_V5_KEY.match(k)
+    if m:
+        return m.group(1), m.group(2)
+    k = k.lstrip("/")
     at = k.find("@", 1)
     if at > 0:
         name, ver = k[:at], k[at + 1:]
@@ -387,7 +395,11 @@ def _pnpm_key(key):
 
 
 def _pnpm_ver(v):
-    return re.sub(r"\(.*\)$", "", str(v)) if v is not None else ""
+    """Drop the peer suffix: '1.2.3(react@17)' (v6+) or '1.2.3_react@17' (v5)."""
+    if v is None:
+        return ""
+    v = re.sub(r"\(.*\)$", "", str(v))
+    return re.sub(r"^(\d[^_]*)_.*$", r"\1", v)
 
 
 def _parse_pnpm(text, manifest):

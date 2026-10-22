@@ -189,10 +189,11 @@ def prompt_text(fx, skill_dir, repo):
     lines.append("")
     if fx.get("edit"):
         e = fx["edit"]
-        lines.append("Edit %s line %d. Replace exactly:" % (e["file"], e["line"]))
-        lines.append("  %s" % e["from"])
-        lines.append("with:")
-        lines.append("  %s" % e["to"])
+        for ln in e.get("lines") or [e]:
+            lines.append("Edit %s line %d. Replace exactly:" % (e["file"], ln["line"]))
+            lines.append("  %s" % ln["from"])
+            lines.append("with:")
+            lines.append("  %s" % ln["to"])
         lines.append("Change nothing else in that file or any other file.")
     else:
         base = os.path.dirname(i["lockfile"]) if i.get("lockfile") else ""
