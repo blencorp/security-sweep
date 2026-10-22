@@ -11,4 +11,4 @@ All notable changes to this project are documented here. The format follows [Kee
 - `check`: footprint-only scope check against a plan-time snapshot, rescan, test result recording; refuses stale plans and unapproved fixes.
 - `revert` and `report`.
 - osv-scanner v2.7.0 pinned by SHA-256 per platform.
-- Offline replay test suite with 11 sample projects, including a trap where `npm audit fix --force` breaks the app.
+- Offline replay test suite with 10 sample projects, including a trap where `npm audit fix --force` breaks the app.

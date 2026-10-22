@@ -18,6 +18,9 @@ jobs:
         os: [ubuntu-latest, macos-latest]
         python: ["3.9", "3.10", "3.11", "3.12", "3.13"]
         exclude:
+          # Older Pythons are not available for macOS arm64 runners; cover them on Linux.
+          - os: macos-latest
+            python: "3.9"
           - os: macos-latest
             python: "3.10"
           - os: macos-latest

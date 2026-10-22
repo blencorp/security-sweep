@@ -35,6 +35,6 @@ python3 evals/agent-check/run.py --agent claude --runs 1         # 6 sessions: 3
 python3 evals/agent-check/run.py --agent codex --conditions without
 ```
 
-Every session is a real, billed agent run (Claude sessions are capped with `--budget`, default $5). Agents run with permission prompts disabled inside a throwaway temp directory. Results, transcripts and a markdown table go to `evals/runs/<timestamp>/` (git-ignored). Copy the table into the README for a release.
+Every session is a real, billed agent run (Claude sessions are capped with `--budget`, default $15). Agents run with permission prompts disabled inside a throwaway temp directory. Results, transcripts and a markdown table go to `evals/runs/<timestamp>/` (git-ignored). Copy the table into the README for a release.
 
 Codex: installing the skill for a Codex session is not automated yet. Install it for Codex by hand (`npx skills add blencorp/security-sweep` and choose Codex) before running `--conditions with`.

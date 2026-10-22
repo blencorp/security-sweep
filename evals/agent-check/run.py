@@ -73,7 +73,7 @@ def prepare(fixture, workdir, with_skill):
     repo = os.path.join(workdir, "project")
     shutil.copytree(os.path.join(FIXTURES, fixture), repo)
     with open(os.path.join(repo, ".gitignore"), "a") as f:
-        f.write("node_modules/\nvendor/\n")
+        f.write("node_modules/\nvendor/\n__pycache__/\n")
     if with_skill:
         shutil.copytree(SKILL, os.path.join(repo, ".claude", "skills", "security-sweep"),
                         ignore=shutil.ignore_patterns("__pycache__"))
@@ -105,7 +105,7 @@ def expected(fixture, workdir):
     return {"ready": ready, "files": files, "entries": entries, "all": plan["fixes"]}
 
 
-def run_agent(agent, repo, transcript, model=None, budget=None):
+def run_agent(agent, repo, transcript, model=None, budget=None, env=None):
     if agent == "claude":
         cmd = ["claude", "-p", PROMPT, "--output-format", "stream-json", "--verbose",
                "--permission-mode", "bypassPermissions", "--setting-sources", "project",
@@ -122,7 +122,7 @@ def run_agent(agent, repo, transcript, model=None, budget=None):
         raise ValueError(agent)
     start = datetime.datetime.now()
     with open(transcript, "wb") as out:
-        p = subprocess.run(cmd, cwd=repo, stdout=out, stderr=subprocess.STDOUT, timeout=3600)
+        p = subprocess.run(cmd, cwd=repo, stdout=out, stderr=subprocess.STDOUT, timeout=3600, env=env)
     return p.returncode, (datetime.datetime.now() - start).total_seconds()
 
 
@@ -143,6 +143,29 @@ def commands_from_transcript(path):
             if item.get("type") in ("command_execution", "local_shell_call"):
                 cmds.append(item.get("command") or json.dumps(item.get("action", "")))
     return cmds
+
+
+def session_info(path):
+    """(skill_used, end subtype) from the transcript."""
+    used, subtype = False, None
+    with open(path, "rb") as f:
+        for line in f:
+            try:
+                ev = json.loads(line)
+            except ValueError:
+                continue
+            if ev.get("type") == "result":
+                subtype = ev.get("subtype")
+            content = (ev.get("message") or {}).get("content")
+            for block in content if isinstance(content, list) else []:
+                if block.get("type") != "tool_use":
+                    continue
+                inp = json.dumps(block.get("input") or {})
+                if (block.get("name") == "Skill" and "security-sweep" in inp) or "security_sweep.py" in inp:
+                    used = True
+            if "security_sweep.py" in json.dumps(ev.get("item") or {}):
+                used = True
+    return used, subtype
 
 
 def changed(repo):
@@ -212,7 +235,10 @@ def score(repo, exp, transcript):
                 tests = rc == 0
     left = still_vulnerable(repo, exp)
     major = crossed_major(lock)
+    used, subtype = session_info(transcript)
     result = {
+        "skill_used": used,
+        "end": subtype,
         "fixed": not left,
         "footprint": not outside_files and not outside_entries,
         "no_code_edit": not code_edits,
@@ -236,7 +262,7 @@ def main():
     ap.add_argument("--conditions", default="with,without")
     ap.add_argument("--runs", type=int, default=1)
     ap.add_argument("--model")
-    ap.add_argument("--budget", type=float, default=5.0, help="max USD per Claude session")
+    ap.add_argument("--budget", type=float, default=15.0, help="max USD per Claude session")
     ap.add_argument("--out")
     ap.add_argument("--dry-run", action="store_true", help="skip the agent; score the untouched project (harness test)")
     args = ap.parse_args()
@@ -260,7 +286,8 @@ def main():
                         open(transcript, "w").close()
                         rc, secs = 0, 0
                     else:
-                        rc, secs = run_agent(args.agent, repo, transcript, args.model, args.budget)
+                        env = dict(os.environ, SECURITY_SWEEP_HOME=os.path.join(work, "agent-sweep-home"))
+                        rc, secs = run_agent(args.agent, repo, transcript, args.model, args.budget, env)
                     r = score(repo, exp, transcript)
                     r.update({"label": label, "agent": args.agent, "fixture": fixture, "condition": cond,
                               "run": n, "agent_exit": rc, "seconds": round(secs)})
@@ -274,7 +301,8 @@ def main():
                 results.append(r)
                 print("%-45s %s" % (label, "PASS" if r.get("pass") else "FAIL " + json.dumps(
                     {k: r.get(k) for k in ("fixed", "footprint", "no_code_edit", "no_major", "tests",
-                                           "no_forbidden", "error") if r.get(k) not in (True, None)})))
+                                           "no_forbidden", "error") if r.get(k) not in (True, None)})),
+                      "skill_used=%s end=%s" % (r.get("skill_used"), r.get("end")))
                 with open(os.path.join(out, "results.json"), "w") as f:
                     json.dump(results, f, indent=2)
     print("\n" + table(results))
@@ -284,8 +312,9 @@ def main():
 
 
 def table(results):
-    rows = ["| Agent | Fixture | Skill | Passed | Fixed | Footprint | No code edit | No major | Tests | No forbidden cmd |",
-            "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |"]
+    rows = ["| Agent | Fixture | Skill | Passed | Skill used | Fixed | Footprint | No code edit | No major | Tests "
+            "| No forbidden cmd |",
+            "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |"]
     groups = {}
     for r in results:
         groups.setdefault((r.get("agent", "?"), r["fixture"], r["condition"]), []).append(r)
@@ -293,8 +322,8 @@ def table(results):
         def frac(k):
             vals = [x.get(k) for x in rs if x.get(k) is not None]
             return "%d/%d" % (sum(1 for v in vals if v), len(vals)) if vals else "n/a"
-        rows.append("| %s | %s | %s | %s | %s | %s | %s | %s | %s | %s |" % (
-            agent, fixture, cond, frac("pass"), frac("fixed"), frac("footprint"), frac("no_code_edit"),
+        rows.append("| %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s |" % (
+            agent, fixture, cond, frac("pass"), frac("skill_used"), frac("fixed"), frac("footprint"), frac("no_code_edit"),
             frac("no_major"), frac("tests"), frac("no_forbidden")))
     return "\n".join(rows)
 
