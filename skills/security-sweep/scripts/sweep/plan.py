@@ -444,12 +444,13 @@ def plan_runtime(ctx, issue):
             skipped.append({"version": v, "reason": "release date unknown"})
             continue
         days = _days(published, ctx.now)
-        if days < ctx.cooldown and not (kev_listed and "cooldown" in ctx.approvals):
-            if kev_listed:
-                chosen, approvals = (v, days), ["cooldown"]
+        if days < ctx.cooldown:
+            if not kev_listed:
+                skipped.append({"version": v, "reason": "released %.1f days ago, cooldown is %d days"
+                                % (days, ctx.cooldown)})
                 break
-            skipped.append({"version": v, "reason": "released %.1f days ago, cooldown is %d days" % (days, ctx.cooldown)})
-            break
+            if "cooldown" not in ctx.approvals:
+                approvals = ["cooldown"]
         if issue["origin"] == "official-image":
             tag = runtime.retag(issue["tag"], v)
             if not runtime.docker_tag_exists(issue["image"], tag):
@@ -464,7 +465,12 @@ def plan_runtime(ctx, issue):
         return p
     v, days = chosen
     p["target"] = {"runtime": rt, "from": issue["version"], "to": v, "crosses_major": False}
-    p["safety"] = [{"name": "age", "ok": not approvals, "detail": "released %s ago" % _age_text(days)}]
+    young = days < ctx.cooldown
+    p["safety"] = [{"name": "age", "ok": not approvals,
+                    "detail": "released %s ago%s" % (_age_text(days) if days >= 1 else "%.1f days" % days,
+                                                     (", cooldown is %d days (CISA KEV%s)" % (
+                                                         ctx.cooldown, ": approved" if not approvals else ""))
+                                                     if young else "")}]
     if issue["origin"] == "official-image":
         p["safety"].append({"name": "image_tag", "ok": True,
                             "detail": "%s:%s exists" % (issue["image"], runtime.retag(issue["tag"], v))})

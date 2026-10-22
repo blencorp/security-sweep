@@ -187,6 +187,10 @@ def run_check(repo, run_dir, fix_id, tests=None):
            "rescan": None, "tests": tests, "status": None}
     if not sc["applied"]:
         out["status"] = "not_applied"
+    elif fx["status"] == "needs_approval":
+        # Rule 2: crossing a major/line (or the cooldown) needs explicit
+        # approval, recorded by re-planning with --approve.
+        out["status"] = "applied_without_approval"
     elif not sc["ok"]:
         out["status"] = "out_of_scope"
     else:
@@ -267,6 +271,7 @@ FINAL_TEXT = {
     "applied_untested": "applied and verified, but the project has no tests",
     "awaiting_tests": "applied and verified; test result not recorded yet",
     "tests_failed": "tests failed: must be reverted",
+    "applied_without_approval": "applied without the required approval: must be reverted",
     "incomplete": "INCOMPLETE (a data source failed)",
     "ready": "not applied (ready)",
 }

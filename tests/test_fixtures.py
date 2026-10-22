@@ -259,8 +259,9 @@ class ComposerDirectTest(FixtureTest):
         self.assertEqual(fx["status"], "ready", fx)
         # v2.0.2 fixes CVE-2023-23924 but introduces CVE-2023-24813 (critical),
         # so the smallest safe fix is v2.0.3.
-        self.assertEqual(fx["skipped_versions"][0]["version"], "v2.0.2")
-        self.assertIn("introduces critical advisory", fx["skipped_versions"][0]["reason"])
+        if not helpers.live():
+            self.assertEqual(fx["skipped_versions"][0]["version"], "v2.0.2")
+            self.assertIn("introduces critical advisory", fx["skipped_versions"][0]["reason"])
         self.assertEqual(fx["target"]["to"], "v2.0.3")
         self.assertEqual(fx["steps"][-1][:5], ["composer", "update", "dompdf/dompdf", "--with", "dompdf/dompdf:v2.0.3"])
         self.assertIn("--no-install", fx["steps"][-1])
@@ -276,13 +277,15 @@ class PhpImageTest(FixtureTest):
         self.assertEqual(s["status"], "COMPLETE")
         i = s["critical"][0]
         self.assertEqual((i["kind"], i["runtime"], i["origin"], i["version"]), ("runtime", "php", "official-image", "8.2.25"))
-        self.assertEqual(sorted(a["id"] for a in i["advisories"]), ["CVE-2024-11236", "CVE-2024-8932"])
+        ids = sorted(a["id"] for a in i["advisories"])
+        self.assertTrue({"CVE-2024-11236", "CVE-2024-8932"} <= set(ids), ids)
         code, p = self.plan()
         fx = self.only_fix(p)
         self.assertEqual(fx["status"], "ready")
-        self.assertEqual(fx["target"]["to"], "8.2.26")
-        self.assertEqual(fx["edit"], {"file": "Dockerfile", "line": 1, "from": "FROM php:8.2.25-cli",
-                                      "to": "FROM php:8.2.26-cli"})
+        if not helpers.live():
+            self.assertEqual(fx["target"]["to"], "8.2.26")
+            self.assertEqual(fx["edit"], {"file": "Dockerfile", "line": 1, "from": "FROM php:8.2.25-cli",
+                                          "to": "FROM php:8.2.26-cli"})
         self.assertEqual(fx["footprint"]["files"], ["Dockerfile"])
 
     def test_check_runtime_edit(self):
@@ -308,12 +311,13 @@ class DebianPhpTest(FixtureTest):
         # Upstream PHP 8.2.18 is affected by CVE-2024-4577 (on CISA KEV), but
         # Debian's tracker says its php8.2 package is not: it must not show.
         self.assertNotIn("CVE-2024-4577", ids)
-        self.assertEqual(s["critical"][0]["advisories"][0]["fixed_in"], "8.2.26-1~deb12u1")
         code, p = self.plan()
         fx = self.only_fix(p)
-        self.assertEqual(fx["target"]["to"], "8.2.26-1~deb12u1")
         self.assertEqual(fx["edit"]["line"], 4)
-        self.assertIn("php8.2-cli=8.2.26-1~deb12u1", fx["edit"]["to"])
+        if not helpers.live():
+            self.assertEqual(s["critical"][0]["advisories"][0]["fixed_in"], "8.2.26-1~deb12u1")
+            self.assertEqual(fx["target"]["to"], "8.2.26-1~deb12u1")
+            self.assertIn("php8.2-cli=8.2.26-1~deb12u1", fx["edit"]["to"])
         self.assertEqual(fx["footprint"]["files"], ["Dockerfile"])
 
     def test_patched_distro_version_not_flagged(self):
@@ -341,19 +345,159 @@ class NoLockfileTest(FixtureTest):
         self.assertNotIn(" clean", md.replace("Do not call this project clean", ""))
 
 
-@unittest.skipUnless(helpers.live(), "live only: runs real npm in the project")
-class LiveCommandsMatchFootprint(FixtureTest):
-    fixture = "npm-direct"
+class LiveCommandsMixin(object):
+    """Run the prescribed commands in the real project and check the result
+    matches the footprint computed in the scratch copy."""
+    materialize_extra = []
 
     def test_prescribed_commands_stay_in_footprint(self):
         self.scan()
         code, p = self.plan()
         fx = self.only_fix(p)
         for step in fx["steps"]:
-            subprocess.run(step, cwd=self.repo, check=True, stdout=subprocess.DEVNULL)
-        subprocess.run(fx["materialize"] + ["--ignore-scripts"], cwd=self.repo, check=True, stdout=subprocess.DEVNULL)
+            subprocess.run(step, cwd=self.repo, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.run(fx["materialize"] + self.materialize_extra, cwd=self.repo, check=True,
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         code, res = self.sweep("check", "C1", "--repo", self.repo, "--json")
         self.assertEqual(res["status"], "awaiting_tests", res)
+
+
+@unittest.skipUnless(helpers.live(), "live only: runs real package managers in the project")
+class LiveNpmDirect(LiveCommandsMixin, FixtureTest):
+    fixture = "npm-direct"
+    materialize_extra = ["--ignore-scripts"]
+
+
+@unittest.skipUnless(helpers.live(), "live only: runs real package managers in the project")
+class LiveNpmTransitive(LiveCommandsMixin, FixtureTest):
+    fixture = "npm-transitive"
+    materialize_extra = ["--ignore-scripts"]
+
+
+@unittest.skipUnless(helpers.live(), "live only: runs real package managers in the project")
+class LiveComposerDirect(LiveCommandsMixin, FixtureTest):
+    fixture = "composer-direct"
+    materialize_extra = ["--no-scripts", "--no-plugins", "--ignore-platform-req=ext-*"]
+
+
+class TrapTest(FixtureTest):
+    """minimist (patch fix) + ejs (fix only in 3.x, which breaks this app)."""
+    fixture = "trap"
+
+    def ids(self):
+        code, s = self.scan()
+        return {i["package"]: i["id"] for i in s["critical"]}
+
+    def test_plan_separates_safe_and_breaking(self):
+        ids = self.ids()
+        code, p = self.plan()
+        by = {f["issue"]["package"]: f for f in p["fixes"]}
+        self.assertEqual(by["minimist"]["status"], "ready")
+        self.assertEqual(by["minimist"]["footprint"]["entries"], [{"name": "minimist", "from": "1.2.5", "to": "1.2.6"}])
+        self.assertEqual(by["ejs"]["status"], "needs_approval")
+        self.assertEqual(by["ejs"]["approvals_needed"], ["major"])
+        self.assertEqual(set(ids), {"minimist", "ejs"})
+
+    def test_unapproved_major_fails_check(self):
+        ids = self.ids()
+        self.plan()
+        self.apply_expected(ids["ejs"])
+        code, res = self.sweep("check", ids["ejs"], "--repo", self.repo, "--json")
+        self.assertEqual(code, 1)
+        self.assertEqual(res["status"], "applied_without_approval")
+
+    def test_approve_requires_fix_id(self):
+        self.ids()
+        buf = io.StringIO()
+        with contextlib.redirect_stderr(buf):
+            code, _ = self.sweep("plan", "--repo", self.repo, "--approve", "major")
+        self.assertEqual(code, 3)
+        self.assertIn("--fix", buf.getvalue())
+
+    def test_sequential_fixes_and_stale_guard(self):
+        ids = self.ids()
+        ejs, mini = ids["ejs"], ids["minimist"]
+        self.plan("--fix", ejs, "--approve", "major")
+        self.plan("--fix", mini)
+        self.apply_expected(mini)
+        code, res = self.sweep("check", mini, "--repo", self.repo, "--tests", "pass", "--json")
+        self.assertEqual(res["status"], "fixed")
+        # ejs was planned before minimist was kept: its snapshot is stale.
+        buf = io.StringIO()
+        with contextlib.redirect_stderr(buf):
+            code, _ = self.sweep("check", ejs, "--repo", self.repo)
+        self.assertEqual(code, 3)
+        self.assertIn("stale", buf.getvalue())
+        # Re-planning against the current project fixes that.
+        code, p = self.plan("--fix", ejs, "--approve", "major")
+        fx = self.only_fix(p, ejs)
+        self.assertEqual(fx["status"], "ready")
+        self.assertNotIn("minimist", [e["name"] for e in fx["footprint"]["entries"]])
+        self.apply_expected(ejs)
+        code, res = self.sweep("check", ejs, "--repo", self.repo, "--json")
+        self.assertEqual(res["status"], "awaiting_tests", res)
+        self.sweep("check", ejs, "--repo", self.repo, "--tests", "fail")
+        code, out = self.sweep("revert", ejs, "--repo", self.repo, "--reason", "test failed: legacy include removed in ejs 3")
+        self.assertEqual(code, 0)
+        with open(os.path.join(self.repo, "package.json")) as f:
+            pkg = json.load(f)
+        self.assertEqual(pkg["dependencies"], {"ejs": "^2.7.4", "minimist": "1.2.6"})
+        code, rep = self.sweep("report", "--repo", self.repo, "--json")
+        status = {r["id"]: r["status"] for r in rep["fixes"]}
+        self.assertEqual(status, {mini: "fixed", ejs: "reverted"})
+
+
+class KevCooldownTest(FixtureTest):
+    """PHP 8.2.19 two days after 8.2.20 shipped the fix for CVE-2024-4577,
+    which is on CISA KEV. (The KEV catalog itself is not clock-filtered.)"""
+    fixture = "php-image"
+    now = "2024-06-08T00:00:00Z"
+
+    def setUp(self):
+        FixtureTest.setUp(self)
+        with open(os.path.join(self.repo, "Dockerfile"), "w") as f:
+            f.write("FROM php:8.2.19-cli\n")
+
+    def test_kev_young_fix_needs_approval_then_ready(self):
+        code, s = self.scan()
+        i = s["critical"][0]
+        self.assertEqual([a["id"] for a in i["advisories"]], ["CVE-2024-4577"])
+        self.assertTrue(i["advisories"][0]["kev"])
+        code, p = self.plan()
+        fx = self.only_fix(p)
+        self.assertEqual(fx["status"], "needs_approval")
+        self.assertEqual(fx["approvals_needed"], ["cooldown"])
+        self.assertEqual(fx["target"]["to"], "8.2.20")
+        code, p = self.plan("--fix", "C1", "--approve", "cooldown")
+        self.assertEqual(self.only_fix(p)["status"], "ready")
+
+
+class NodeNamedCveTest(FixtureTest):
+    fixture = "node-version"
+
+    def test_named_cve_becomes_critical_and_high_is_listed(self):
+        code, s = self.scan()
+        rt = s["runtimes"][0]
+        self.assertEqual((rt["runtime"], rt["origin"], rt["declared"]), ("node", "version-file", "22.12.0"))
+        high = [a for i in s["high"] for a in i["advisories"]]
+        self.assertTrue(high, "expected high-severity Node advisories for 22.12.0")
+        named = high[0]["id"]
+        code, s2 = self.scan("--cve", named)
+        crit = [a for i in s2["critical"] for a in i["advisories"]]
+        self.assertIn(named, [a["id"] for a in crit])
+        self.assertTrue([a for a in crit if a["id"] == named][0]["named"])
+        code, p = self.plan()
+        fx = self.only_fix(p)
+        self.assertEqual(fx["status"], "ready")
+        self.assertEqual(fx["edit"]["file"], ".nvmrc")
+        self.assertEqual(fx["edit"]["from"], "22.12.0")
+
+    def test_include_high_plans_high_issues(self):
+        code, s = self.scan()
+        code, p = self.plan()
+        self.assertEqual([f["id"] for f in p["fixes"]], [i["id"] for i in s["critical"]])
+        code, p = self.plan("--include-high")
+        self.assertTrue(any(f["id"].startswith("H") for f in p["fixes"]))
 
 
 if __name__ == "__main__":

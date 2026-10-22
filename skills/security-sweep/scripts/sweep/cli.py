@@ -67,6 +67,8 @@ def _load_scan(args):
 
 
 def cmd_plan(args):
+    if args.approve and not args.fix:
+        raise ValueError("--approve applies to one fix the user approved; use it with --fix ID")
     repo, out, result = _load_scan(args)
     p = plan.run(repo, result, out, fix_id=args.fix, include_high=args.include_high,
                  approvals=args.approve, cooldown=args.cooldown)
@@ -110,6 +112,13 @@ def cmd_check(args):
         return _check_code(res)
     sc = res["scope"]
     lines = ["Check %s: %s" % (args.fix, check.FINAL_TEXT.get(res["status"], res["status"]))]
+    if res["status"] == "applied_without_approval":
+        lines.append("  Approval: FAIL this fix needs approval (%s). Revert it; re-plan with --approve only after "
+                     "the user explicitly agrees." % ", ".join(fx.get("approvals_needed") or []))
+        lines.append("  Run: %s revert %s --repo %s --reason \"applied without approval\""
+                     % (report.sweep_cmd(SKILL_DIR), args.fix, repo))
+        _print("\n".join(lines))
+        return 1
     if not sc["applied"]:
         lines.append("  Scope:  FAIL nothing in the footprint changed; the fix has not been applied")
     elif sc["ok"]:
