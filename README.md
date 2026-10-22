@@ -139,4 +139,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md). Security issues: [SECURITY.md](SECURITY.
 
 ## License
 
-[Apache-2.0](LICENSE)
+Copyright 2026 BLEN, Inc. Licensed under the [Apache License, Version 2.0](LICENSE). See [NOTICE](NOTICE).
